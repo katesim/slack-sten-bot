@@ -24,9 +24,9 @@ def send_message(channel_id, message):
 
 def _event_handler(event_type, slack_event):
     if event_type == "message":
-        user = slack_event["event"]["user"]
+        user = slack_event["event"].get("user")
         # Send the onboarding message
-        if slack_event["event"]["thread_ts"]:
+        if slack_event["event"].get(["thread_ts"]):
             answer = slack_event["event"]["thread_ts"]
         else: answer = " "
         send_message(channel_id=slack_event["event"]["channel"], message=slack_event["event"]["text"] + 'ts = ' + slack_event["event"]["ts"] +'_ '+answer)
