@@ -12,7 +12,6 @@ SLACK_BOT_TOKEN = os.environ["SLACK_TOKEN"]
 slack_client = SlackClient(SLACK_BOT_TOKEN)
 
 
-
 def send_message(channel_id, message):
     slack_client.api_call(
         "chat.postMessage",
@@ -28,8 +27,10 @@ def _event_handler(event_type, slack_event):
         # Send the onboarding message
         if slack_event["event"].get("thread_ts"):
             answer = slack_event["event"]["thread_ts"]
-        else: answer = " "
-        send_message(channel_id=slack_event["event"]["channel"], message=slack_event["event"]["text"] + 'ts = ' + slack_event["event"]["ts"] +'_ '+answer)
+        else:
+            answer = " "
+        mes = slack_event["event"]["text"] + 'ts = ' + slack_event["event"]["ts"] + '_ ' + answer
+        send_message(channel_id=slack_event["event"]["channel"], message=mes)
         return make_response("Message Sent", 200, )
 
     # ============= Event Type Not Found! ============= #
