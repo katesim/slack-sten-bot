@@ -26,7 +26,10 @@ def _event_handler(event_type, slack_event):
     if event_type == "message":
         user = slack_event["event"]["user"]
         # Send the onboarding message
-        send_message(channel_id=slack_event["event"]["channel"], message=slack_event["event"]["text"])
+        if slack_event["event"]["thread_ts"]:
+            answer = slack_event["event"]["thread_ts"]
+        else: answer = " "
+        send_message(channel_id=slack_event["event"]["channel"], message=slack_event["event"]["text"] + 'ts = ' + slack_event["event"]["ts"] +'_ '+answer)
         return make_response("Message Sent", 200, )
 
     # ============= Event Type Not Found! ============= #
