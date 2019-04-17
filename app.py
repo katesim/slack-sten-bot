@@ -1,4 +1,5 @@
-from flask import Flask, request, make_response, Response
+from flask import Flask, make_response, Response
+import requests
 import json
 import os
 from slackclient import SlackClient
@@ -30,7 +31,7 @@ def _event_handler(event_type, slack_event):
                 {
                     "fallback": "Upgrade your Slack client to use messages like these.",
                     "color": "#3AA3E3",
-                    "author_name": request.get("https://slack.com/api/users.list?token="+SLACK_BOT_TOKEN)["members"][0]["real_name"],
+                    "author_name": requests.get("https://slack.com/api/users.list?token="+SLACK_BOT_TOKEN)["members"][0]["real_name"],
                     "attachment_type": "default",
                     "title": "Report",
                     "text": slack_event["event"]["text"],
