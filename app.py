@@ -25,7 +25,7 @@ def _event_handler(event_type, slack_event):
     if event_type == "message":
 
         if slack_event["event"].get("user"):
-            message = 'message " ' + slack_event["event"]["text"] + ' "from user' + slack_event["event"]["user"]
+            message = 'message "' + slack_event["event"]["text"] + '" from user ' + slack_event["event"]["user"] с
             send_message(channel_id=slack_event["event"]["channel"], message=message)
             return make_response("Message Sent", 200, )
 
