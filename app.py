@@ -31,12 +31,12 @@ def _event_handler(event_type, slack_event):
 
             for user in [r["members"][i]["id"] for i in range(0, len(r["members"]))]:
                 if user == slack_event["event"].get("user"):
-
+                    print(user)
                     attachments = [
                         {
                             "fallback": "Upgrade your Slack client to use messages like these.",
                             "color": "#3AA3E3",
-                            "author_name": user["real_name"],
+                            "author_name": "kek",
                             "attachment_type": "default",
                             "title": "Report",
                             "text": slack_event["event"]["text"],
