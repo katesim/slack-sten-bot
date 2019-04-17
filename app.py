@@ -25,12 +25,8 @@ def _event_handler(event_type, slack_event):
     if event_type == "message":
 
         if slack_event["event"].get("user"):
-            if slack_event["event"].get("thread_ts"):
-                answer = slack_event["event"]["thread_ts"]
-            else:
-                answer = " "
-            mes = slack_event["event"]["text"] + 'ts = ' + slack_event["event"]["ts"] + '_ ' + answer
-            send_message(channel_id=slack_event["event"]["channel"], message=mes)
+            message = 'message " ' + slack_event["event"]["text"] + ' "from user' + slack_event["event"]["user"]
+            send_message(channel_id=slack_event["event"]["channel"], message=message)
             return make_response("Message Sent", 200, )
 
     # ============= Event Type Not Found! ============= #
@@ -91,12 +87,16 @@ def message_options():
     menu_options = {
         "options": [
             {
-                "text": "Cappuccino",
-                "value": "cappuccino"
+                "text": "Same as yesterday",
+                "value": "same_as_yesterday"
             },
             {
-                "text": "Latte",
-                "value": "latte"
+                "text": "I'm busy right now",
+                "value": "busy"
+            },
+            {
+                "text": "I'm on vacation",
+                "value": "vacation"
             }
         ]
     }
@@ -113,16 +113,18 @@ def message_actions():
     # Check to see what the user's selection was and update the message accordingly
     selection = form_json["actions"][0]["selected_options"][0]["value"]
 
-    if selection == "cappuccino":
-        message_text = "cappuccino"
+    if selection == "same_as_yesterday":
+        message_text = "Same as yesterday"
+    elif selection == "busy":
+        message_text = "I'm busy right now"
     else:
-        message_text = "latte"
+        message_text = "I'm on vacation"
 
     response = slack_client.api_call(
         "chat.update",
         channel=form_json["channel"]["id"],
         ts=form_json["message_ts"],
-        text="One {}, right coming up! :coffee:".format(message_text),
+        text="Your answer is {}  :coffee:".format(message_text),
         attachments=[]  # empty `attachments` to clear the existing massage attachments
     )
 
@@ -154,7 +156,7 @@ attachments_json = [
 slack_client.api_call(
     "chat.postMessage",
     channel="DHCLCG8DQ",
-    text="Would you like some coffee? :coffee:",
+    text="What did you do yesterday? :coffee:",
     attachments=attachments_json
 )
 
