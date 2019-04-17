@@ -29,7 +29,7 @@ def _event_handler(event_type, slack_event):
         if slack_event["event"].get("user"):
             r = requests.get("https://slack.com/api/users.list?token=" + SLACK_BOT_TOKEN).json()
 
-            for user in [r["members"][i]["user"] for i in range(0, len(r["members"]))]:
+            for user in [r["members"][i]["id"] for i in range(0, len(r["members"]))]:
                 if user == slack_event["event"].get("user"):
 
                     attachments = [
