@@ -1,3 +1,4 @@
 httplib2
 slacker
+slackclient
 Flask==0.12
