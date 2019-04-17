@@ -12,12 +12,13 @@ SLACK_BOT_TOKEN = os.environ["SLACK_TOKEN"]
 slack_client = SlackClient(SLACK_BOT_TOKEN)
 
 
-def send_message(channel_id, message):
+def send_message(channel_id, message, attachments_json=[]):
     slack_client.api_call(
         "chat.postMessage",
         channel=channel_id,
         text=message,
-        icon_emoji=':robot_face:'
+        icon_emoji=':robot_face:',
+        attachments=attachments_json
     )
 
 
@@ -25,8 +26,20 @@ def _event_handler(event_type, slack_event):
     if event_type == "message":
 
         if slack_event["event"].get("user"):
-            message = 'message "' + slack_event["event"]["text"] + '" from user ' + slack_event["event"]["user"]
-            send_message(channel_id=slack_event["event"]["channel"], message=message)
+            attachments = [
+                {
+                    "fallback": "Upgrade your Slack client to use messages like these.",
+                    "color": "#3AA3E3",
+                    "author_name": "Kate Simonova",
+                    "attachment_type": "default",
+                    "title": "Report",
+                    "text": slack_event["event"]["text"],
+                    "ts": 123456789
+                }
+            ]
+
+            message = 'New report'
+            send_message(channel_id=slack_event["event"]["channel"], message=message, attachments_json=attachments)
             return make_response("Message Sent", 200, )
 
     # ============= Event Type Not Found! ============= #
