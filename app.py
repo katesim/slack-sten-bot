@@ -16,6 +16,12 @@ slack_client = SlackClient(SLACK_BOT_TOKEN)
 # List of commands for bot
 commands = ['/q']
 
+questions = ["What did you do yesterday? :coffee:",
+             "What are you planning do today?"]
+
+global question_counter
+question_counter = 0
+
 
 @app.route('/', methods=['GET'])
 def webhook():
@@ -156,7 +162,15 @@ def _take_answer(slack_event):
 
 
 def _event_handler(event_type, slack_event, subtype=None):
+    global question_counter
+
     print('\nevent_type: ', event_type)
+
+    # TODO заготовка?
+    if event_type == "message" and subtype == 'message_changed':
+        if slack_event["event"].get('previous_message').get("text") in questions:
+            # TODO если юзер выбрал короткий ответ, то больше не спрашивать его
+            print('user selects short answer: ', slack_event["event"].get("message").get("text"))
 
     if event_type == "message" and subtype != 'bot_message':
         print('dict in event: \n', slack_event["event"])
@@ -175,22 +189,35 @@ def _event_handler(event_type, slack_event, subtype=None):
                         user_id = member.get('id')
                         print('real_name :', real_name_user, 'user_id :', user_id)
 
-                        answer, question = _take_answer(slack_event)
+                        # TODO предыдущее вопрос?
+                        current_message, previous_message = _take_answer(slack_event)
+                        if previous_message in questions:
+                            answer = current_message
+                        else:
+                            answer = None
+                            send_message(channel_id=slack_event["event"]["channel"], message="echo: " + current_message,
+                                         attachments_json=[])
 
-                        attachments = [
-                            {
-                                "fallback": "Upgrade your Slack client to use messages like these.",
-                                "color": "#3AA3E3",
-                                "author_name": real_name_user,
-                                "attachment_type": "default",
-                                "title": "Report",
-                                "text": str("*" + question + "* \n" + answer),
-                                "ts": time.time()
-                            }
-                        ]
+                        if answer:
+                            attachments = [
+                                {
+                                    "fallback": "Upgrade your Slack client to use messages like these.",
+                                    "color": "#3AA3E3",
+                                    "author_name": real_name_user,
+                                    "attachment_type": "default",
+                                    "title": "Report",
+                                    "text": str("*" + questions[question_counter] + "* \n" + answer),
+                                    "ts": time.time()
+                                }
+                            ]
+                            send_message(channel_id=slack_event["event"]["channel"], message='New report',
+                                         attachments_json=attachments)
+                            question_counter += 1
 
-                        send_message(channel_id=slack_event["event"]["channel"], message='New report',
-                                     attachments_json=attachments)
+                        try:
+                            _answer_menu(question=questions[question_counter])
+                        except:
+                            pass
 
                         return make_response("Message Sent", 200, )
 
@@ -202,7 +229,6 @@ def _event_handler(event_type, slack_event, subtype=None):
 
 
 def _answer_menu(question="What did you do yesterday? :coffee:"):
-
     # A Dictionary of message attachment options
     attachments_json = [
         {
