@@ -3,6 +3,7 @@ import requests
 import json
 import os
 from slackclient import SlackClient
+import time
 
 app = Flask(__name__)
 
@@ -14,6 +15,9 @@ slack_client = SlackClient(SLACK_BOT_TOKEN)
 
 # List of commands for bot
 commands = ['/q']
+
+global TIME_LAST_Q
+TIME_LAST_Q = 0
 
 
 @app.route('/', methods=['GET'])
@@ -52,6 +56,7 @@ def events():
 ___BLOCK FOR INTERACTIVE MENU___
 
 '''
+
 
 # The endpoint Slack will load your menu options from
 @app.route("/slack/message_options", methods=["POST"])
@@ -125,35 +130,69 @@ def send_message(channel_id, message, attachments_json=[]):
     )
 
 
+def _command_handler(slack_event, subtype=None):
+    # если команда не от бота, тогда отправляет заново вопромы
+    if subtype != 'bot_message' and slack_event["event"].get("user"):
+        if commands[0] in slack_event["event"].get("text"):
+            print(commands[0], slack_event["event"].get("text"))
+            message = 'command q'
+            send_message(channel_id=slack_event["event"]["channel"], message=message,
+                         attachments_json=[])
+            _answer_menu()
+            return True
+        else:
+            return False
+
+
 def _event_handler(event_type, slack_event, subtype=None):
     print('\nevent_type: ', event_type)
 
+    global TIME_LAST_Q
+
     if event_type == "message":
         print('dict in event: \n', slack_event["event"])
-        if subtype != 'bot_message' and slack_event["event"].get("user"):
-            print(commands[0], slack_event["event"].get("text"))
-            if commands[0] in slack_event["event"].get("text"):
-                message = 'command q'
-                send_message(channel_id=slack_event["event"]["channel"], message=message,
-                             attachments_json=[])
-                _answer_menu()
-                return make_response("Message Sent", 200, )
 
-            elif slack_event["event"].get("user"):
+        is_command = _command_handler(slack_event, subtype=None)
+
+        if is_command:
+            return make_response("Message Sent", 200, )
+
+        else:
+            if slack_event["event"].get("user"):
                 r = requests.get("https://slack.com/api/users.list?token=" + SLACK_BOT_TOKEN).json()
 
                 for user in [r["members"][i]["id"] for i in range(0, len(r["members"]))]:
                     if user == slack_event["event"].get("user"):
                         print(user)
+
+                        r2 = requests.get(
+                            "https://slack.com/api/conversations.history?token=" + SLACK_BOT_TOKEN
+                            + "&channel=" + slack_event["event"]["channel"]
+                            + "&latest=" + str(time.time())
+                            + "&limit=2&inclusive=true").json()
+
+                        answer = r2['messages'][0]['text']
+                        question = r2['messages'][1]['text']
+                        print('Вопрос: ', question)
+                        print('Ответ: ', answer)
+
+                        r3 = requests.get(
+                            "https://slack.com/api/users.list?token=" + SLACK_BOT_TOKEN).json()
+
+                        for member in r3['members']:
+                            if member.get("id") == slack_event["event"].get("user"):
+                                real_name_user = member.get("profile").get("display_name")
+                                print('real_name :', real_name_user)
+
                         attachments = [
                             {
                                 "fallback": "Upgrade your Slack client to use messages like these.",
                                 "color": "#3AA3E3",
-                                "author_name": "kek",
+                                "author_name": real_name_user,
                                 "attachment_type": "default",
                                 "title": "Report",
-                                "text": slack_event["event"]["text"],
-                                "ts": 123456789
+                                "text": str("*" + question + "* \n" + answer),
+                                "ts": time.time()
                             }
                         ]
 
@@ -170,6 +209,9 @@ def _event_handler(event_type, slack_event, subtype=None):
 
 
 def _answer_menu(question="What did you do yesterday? :coffee:"):
+    global TIME_LAST_Q
+    TIME_LAST_Q = time.time()
+
     # A Dictionary of message attachment options
     attachments_json = [
         {
