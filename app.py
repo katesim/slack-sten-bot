@@ -16,9 +16,6 @@ slack_client = SlackClient(SLACK_BOT_TOKEN)
 # List of commands for bot
 commands = ['/q']
 
-global TIME_LAST_Q
-TIME_LAST_Q = 0
-
 
 @app.route('/', methods=['GET'])
 def webhook():
@@ -144,45 +141,41 @@ def _command_handler(slack_event, subtype=None):
             return False
 
 
+def _take_answer(slack_event):
+    conversations_history = requests.get(
+        "https://slack.com/api/conversations.history?token=" + SLACK_BOT_TOKEN
+        + "&channel=" + slack_event["event"]["channel"]
+        + "&latest=" + str(time.time())
+        + "&limit=2&inclusive=true").json()
+
+    answer = conversations_history['messages'][0]['text']
+    question = conversations_history['messages'][1]['text']
+    print('Вопрос: ', question)
+    print('Ответ: ', answer)
+    return answer, question
+
+
 def _event_handler(event_type, slack_event, subtype=None):
     print('\nevent_type: ', event_type)
 
-    global TIME_LAST_Q
-
-    if event_type == "message":
+    if event_type == "message" and subtype != 'bot_message':
         print('dict in event: \n', slack_event["event"])
 
         is_command = _command_handler(slack_event, subtype=None)
-
         if is_command:
             return make_response("Message Sent", 200, )
 
         else:
             if slack_event["event"].get("user"):
-                r = requests.get("https://slack.com/api/users.list?token=" + SLACK_BOT_TOKEN).json()
+                users_list = requests.get("https://slack.com/api/users.list?token=" + SLACK_BOT_TOKEN).json()
 
-                for user in [r["members"][i]["id"] for i in range(0, len(r["members"]))]:
-                    if user == slack_event["event"].get("user"):
-                        print(user)
+                for member in users_list['members']:
+                    if member.get("id") == slack_event["event"].get("user"):
+                        real_name_user = member.get("profile").get("display_name")
+                        user_id = member.get('id')
+                        print('real_name :', real_name_user, 'user_id :', user_id)
 
-                        r2 = requests.get(
-                            "https://slack.com/api/conversations.history?token=" + SLACK_BOT_TOKEN
-                            + "&channel=" + slack_event["event"]["channel"]
-                            + "&latest=" + str(time.time())
-                            + "&limit=2&inclusive=true").json()
-
-                        answer = r2['messages'][0]['text']
-                        question = r2['messages'][1]['text']
-                        print('Вопрос: ', question)
-                        print('Ответ: ', answer)
-
-                        r3 = requests.get(
-                            "https://slack.com/api/users.list?token=" + SLACK_BOT_TOKEN).json()
-
-                        for member in r3['members']:
-                            if member.get("id") == slack_event["event"].get("user"):
-                                real_name_user = member.get("profile").get("display_name")
-                                print('real_name :', real_name_user)
+                        answer, question = _take_answer(slack_event)
 
                         attachments = [
                             {
@@ -196,9 +189,9 @@ def _event_handler(event_type, slack_event, subtype=None):
                             }
                         ]
 
-                        message = 'New report'
-                        send_message(channel_id=slack_event["event"]["channel"], message=message,
+                        send_message(channel_id=slack_event["event"]["channel"], message='New report',
                                      attachments_json=attachments)
+
                         return make_response("Message Sent", 200, )
 
     # ============= Event Type Not Found! ============= #
@@ -209,8 +202,6 @@ def _event_handler(event_type, slack_event, subtype=None):
 
 
 def _answer_menu(question="What did you do yesterday? :coffee:"):
-    global TIME_LAST_Q
-    TIME_LAST_Q = time.time()
 
     # A Dictionary of message attachment options
     attachments_json = [
