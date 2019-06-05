@@ -22,6 +22,9 @@ questions = ["What did you do yesterday? :coffee:",
 global question_counter
 question_counter = 0
 
+global answers
+answers = []
+
 
 @app.route('/', methods=['GET'])
 def webhook():
@@ -134,14 +137,16 @@ def send_message(channel_id, message, attachments_json=[]):
 
 
 def _command_handler(slack_event, subtype=None):
-    # если команда не от бота, тогда отправляет заново вопромы
+    global question_counter
+
     if subtype != 'bot_message' and slack_event["event"].get("user"):
         if commands[0] in slack_event["event"].get("text"):
             print(commands[0], slack_event["event"].get("text"))
             message = 'command q'
             send_message(channel_id=slack_event["event"]["channel"], message=message,
                          attachments_json=[])
-            _answer_menu()
+            _answer_menu(questions[0])
+            question_counter = 0
             return True
         else:
             return False
@@ -159,6 +164,22 @@ def _take_answer(slack_event):
     print('Вопрос: ', question)
     print('Ответ: ', answer)
     return answer, question
+
+
+def _send_report(slack_event, real_name_user, questions, answers):
+    attachments = [
+        {
+            "fallback": "Upgrade your Slack client to use messages like these.",
+            "color": "#3AA3E3",
+            "author_name": real_name_user,
+            "attachment_type": "default",
+            "title": "Report",
+            "text": str("*" + questions[0] + "* \n" + answers[0] + "\n*" + questions[1] + "* \n" + answers[1]),
+            "ts": time.time()
+        }
+    ]
+    send_message(channel_id=slack_event["event"]["channel"], message='New report',
+                 attachments_json=attachments)
 
 
 def _event_handler(event_type, slack_event, subtype=None):
@@ -197,27 +218,17 @@ def _event_handler(event_type, slack_event, subtype=None):
                             answer = None
                             send_message(channel_id=slack_event["event"]["channel"], message="echo: " + current_message,
                                          attachments_json=[])
+                            break
 
                         if answer:
-                            attachments = [
-                                {
-                                    "fallback": "Upgrade your Slack client to use messages like these.",
-                                    "color": "#3AA3E3",
-                                    "author_name": real_name_user,
-                                    "attachment_type": "default",
-                                    "title": "Report",
-                                    "text": str("*" + questions[question_counter] + "* \n" + answer),
-                                    "ts": time.time()
-                                }
-                            ]
-                            send_message(channel_id=slack_event["event"]["channel"], message='New report',
-                                         attachments_json=attachments)
+                            answers.append(answer)
                             question_counter += 1
 
                         try:
                             _answer_menu(question=questions[question_counter])
                         except:
-                            pass
+                            _send_report(slack_event, real_name_user, questions, answers)
+                            question_counter = 0
 
                         return make_response("Message Sent", 200, )
 
