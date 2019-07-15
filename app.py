@@ -4,6 +4,11 @@ import json
 import os
 from slackclient import SlackClient
 import time
+from pprint import pprint
+
+from WorksReportController import WorksReportController
+
+works_report_controller = WorksReportController()
 
 app = Flask(__name__)
 
@@ -106,21 +111,7 @@ def message_actions():
 
             # Check to see what the user's selection was and update the message accordingly
             selection = form_json["actions"][0]["selected_options"][0]["value"]
-
-            if selection == "same_as_yesterday":
-                message_text = "Same as yesterday"
-            elif selection == "busy":
-                message_text = "I'm busy right now"
-            else:
-                message_text = "I'm on vacation"
-
-            response = slack_client.api_call(
-                "chat.update",
-                channel=form_json["channel"]["id"],
-                ts=form_json["message_ts"],
-                text="Your answer is {}  :coffee:".format(message_text),
-                attachments=[]  # empty `attachments` to clear the existing massage attachments
-            )
+            short_answer = works_report_controller.take_short_answer(selection)
 
             response = slack_client.api_call(
                 "chat.update",
