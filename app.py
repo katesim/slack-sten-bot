@@ -8,8 +8,6 @@ from pprint import pprint
 
 from WorksReportController import WorksReportController
 
-works_report_controller = WorksReportController()
-
 app = Flask(__name__)
 
 # Your app's Slack bot user token
@@ -193,15 +191,19 @@ def send_message(channel_id, message, attachments_json=[]):
 
 def _command_handler(slack_event, subtype=None):
     global question_counter
+    global works_report_controller
 
     if subtype != 'bot_message' and slack_event["event"].get("user"):
         if commands[0] in slack_event["event"].get("text"):
             print(commands[0], slack_event["event"].get("text"))
-            message = 'command q'
-            send_message(channel_id=slack_event["event"]["channel"], message=message,
+            send_message(channel_id=slack_event["event"]["channel"],
+                         message='command q',
                          attachments_json=[])
-            _answer_menu(questions[0])
-            question_counter = 0
+
+            works_report_controller = WorksReportController()
+            attachments = works_report_controller.answer_menu(works_report_controller.questions[0])
+            send_message(channel_id=slack_event["event"]["channel"], message=attachments[0],
+                         attachments_json=attachments[1])
             return True
 
         if commands[1] in slack_event["event"].get("text"):
@@ -210,8 +212,6 @@ def _command_handler(slack_event, subtype=None):
             print(slack_event["event"])
             _init_menu()
             print('OPEN')
-            _answer_menu(questions[0])
-            question_counter = 0
             return True
 
         else:
@@ -230,22 +230,6 @@ def _take_answer(slack_event):
     print('Вопрос: ', question)
     print('Ответ: ', answer)
     return answer, question
-
-
-def _send_report(slack_event, real_name_user, questions, answers):
-    attachments = [
-        {
-            "fallback": "Upgrade your Slack client to use messages like these.",
-            "color": "#3AA3E3",
-            "author_name": real_name_user,
-            "attachment_type": "default",
-            "title": "Report",
-            "text": str("*" + questions[0] + "* \n" + answers[0] + "\n*" + questions[1] + "* \n" + answers[1]),
-            "ts": time.time()
-        }
-    ]
-    send_message(channel_id=slack_event["event"]["channel"], message='New report',
-                 attachments_json=attachments)
 
 
 def _send_report_init(slack_event, list_users, list_days):
@@ -330,34 +314,6 @@ def _event_handler(event_type, slack_event, subtype=None):
     return make_response(message, 200, {"X-Slack-No-Retry": 1})
 
 
-def _answer_menu(question="What did you do yesterday? :coffee:"):
-    # A Dictionary of message attachment options
-    attachments_json = [
-        {
-            "fallback": "Upgrade your Slack client to use messages like these.",
-            "color": "#3AA3E3",
-            "attachment_type": "default",
-            "callback_id": "menu_options_2319",
-            "actions": [
-                {
-                    "name": "short_answer_list",
-                    "text": "Pick a variant...",
-                    "type": "select",
-                    "data_source": "external"
-                }
-            ]
-        }
-    ]
-
-    # Send a message with the above attachment, asking the user if they want coffee
-    slack_client.api_call(
-        "chat.postMessage",
-        channel=_channel,
-        text=question,
-        attachments=attachments_json
-    )
-
-
 def _init_menu(question="Init new standUP"):
     # A Dictionary of message attachment options
     attachments_json = [{
@@ -401,7 +357,6 @@ BOT_USER[_channel] = {
     "message_ts": "",
     "order": {}
 }
-# _answer_menu()
 _init_menu()
 
 if __name__ == '__main__':

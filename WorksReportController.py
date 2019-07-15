@@ -33,12 +33,12 @@ class WorksReportController:
         self.answers.append(answer)
         self.question_counter += 1
         try:
-            return self._answer_menu(question=self.questions[self.question_counter])
+            return self.answer_menu(question=self.questions[self.question_counter])
         except:
             self.question_counter = 0
-            return self._send_report(real_name_user, self.questions, self.answers)
+            return self.create_report(real_name_user, self.questions, self.answers)
 
-    def _answer_menu(self, question="What did you do yesterday? :coffee:"):
+    def answer_menu(self, question="What did you do yesterday? :coffee:"):
         return (question, [
             {
                 "fallback": "Upgrade your Slack client to use messages like these.",
@@ -56,7 +56,7 @@ class WorksReportController:
             }
         ])
 
-    def _send_report(self, real_name_user, questions, answers):
+    def create_report(self, real_name_user, questions, answers):
         print("real_name_user", real_name_user)
         return ('New report', [
             {
