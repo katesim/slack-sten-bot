@@ -75,12 +75,9 @@ ___BLOCK FOR INTERACTIVE MENU___
 # The endpoint Slack will load your menu options from
 @app.route("/slack/message_options", methods=["POST"])
 def message_options():
-    # Parse the request payload
-    form_json = json.loads(request.form["payload"])
-
     # Dictionary of menu options which will be sent as JSON
     menu_options = works_report_controller.take_menu_options()
-    
+
     # Load options dict as JSON and respond to Slack
     return Response(json.dumps(menu_options), mimetype='application/json')
 
@@ -251,7 +248,7 @@ def _send_report(slack_event, real_name_user, questions, answers):
                  attachments_json=attachments)
 
 
-def _send_report_init(slack_event,  list_users, list_days):
+def _send_report_init(slack_event, list_users, list_days):
     attachments = [
         {
             "fallback": "Upgrade your Slack client to use messages like these.",
@@ -300,7 +297,11 @@ def _event_handler(event_type, slack_event, subtype=None):
                         # TODO предыдущее вопрос?
                         current_message, previous_message = _take_answer(slack_event)
                         if previous_message in questions:
-                            answer = current_message
+                            attachments = works_report_controller.remember_answer(answer=current_message,
+                                                                                  real_name_user=real_name_user)
+                            send_message(channel_id=slack_event["event"]["channel"],
+                                         message=attachments[0],
+                                         attachments_json=attachments[1])
 
                         elif previous_message == 'Whom to invite?':
                             inviter_list = current_message
@@ -310,25 +311,15 @@ def _event_handler(event_type, slack_event, subtype=None):
                         elif previous_message == 'Days?':
                             print('EEEEEEEEEEEE')
                             days_list = current_message
-                        #     send_message(_channel, str(days_list))
-                        #     send_message(_channel, 'Days?')
-                            _send_report_init(slack_event, inviter_list,days_list)
+                            #     send_message(_channel, str(days_list))
+                            #     send_message(_channel, 'Days?')
+                            _send_report_init(slack_event, inviter_list, days_list)
 
                         else:
                             answer = None
                             # send_message(channel_id=slack_event["event"]["channel"], message="echo: " + current_message,
                             #              attachments_json=[])
                             return make_response("Message Sent", 200, )
-
-                        if answer:
-                            answers.append(answer)
-                            question_counter += 1
-
-                        try:
-                            _answer_menu(question=questions[question_counter])
-                        except:
-                            _send_report(slack_event, real_name_user, questions, answers)
-                            question_counter = 0
 
                         return make_response("Message Sent", 200, )
 
