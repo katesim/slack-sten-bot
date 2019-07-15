@@ -5,7 +5,6 @@ class InitController:
     def __init__(self):
         times = [(str(hour), str(minut)) for hour in range(7, 21) for minut in range(0, 60, 15)]
         self.time_string = [x[0] + '.' + x[1] for x in times]
-        print('TIMES:', times)
 
     def init_menu(self, channel):
         return [{
