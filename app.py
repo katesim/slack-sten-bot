@@ -7,6 +7,9 @@ import time
 from pprint import pprint
 
 from WorksReportController import WorksReportController
+from InitController import InitController
+
+init_controller = InitController()
 
 app = Flask(__name__)
 
@@ -201,7 +204,11 @@ def _command_handler(slack_event, subtype=None):
             print(commands[1], slack_event["event"].get("text"))
             print('INPUT')
             print(slack_event["event"])
-            _init_menu()
+
+            send_message(channel_id=_channel,
+                         message='Init new standUP',
+                         attachments_json=init_controller.init_menu(channel=_channel))
+
             print('OPEN')
             return True
 
@@ -305,30 +312,6 @@ def _event_handler(event_type, slack_event, subtype=None):
     return make_response(message, 200, {"X-Slack-No-Retry": 1})
 
 
-def _init_menu(question="Init new standUP"):
-    # A Dictionary of message attachment options
-    attachments_json = [{
-        "callback_id": _channel + "init_form",
-        "text": "",
-        "color": "#3AA3E3",
-        "attachment_type": "default",
-        "actions": [{
-            "name": "init_standup",
-            "text": ":coffee: Init new StandUP",
-            "type": "button",
-            "value": "init_standup"
-        }]
-    }]
-
-    # Send a message with the above attachment, asking the user if they want coffee
-    slack_client.api_call(
-        "chat.postMessage",
-        channel=_channel,
-        text=question,
-        attachments=attachments_json
-    )
-
-
 def _first_message():
     user_dm = slack_client.api_call(
         "chat.postMessage",
@@ -348,7 +331,10 @@ BOT_USER[_channel] = {
     "message_ts": "",
     "order": {}
 }
-_init_menu()
+
+send_message(channel_id=_channel,
+             message='Init new standUP',
+             attachments_json=init_controller.init_menu(channel=_channel))
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
