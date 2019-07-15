@@ -22,7 +22,7 @@ slack_client = SlackClient(SLACK_BOT_TOKEN)
 # List of commands for bot
 commands = ['/q', '/init']
 
-BOT_USER = {}
+# TODO избавиться от хардкода
 _channel = "DHCLCG8DQ"
 
 
@@ -55,13 +55,6 @@ def events():
     # send a quirky but helpful error response
     return make_response("[NO EVENT IN SLACK REQUEST] These are not the droids\
                          you're looking for.", 404, {"X-Slack-No-Retry": 1})
-
-
-'''
-
-___BLOCK FOR INTERACTIVE MENU___
-
-'''
 
 
 # The endpoint Slack will load your menu options from
@@ -124,13 +117,6 @@ def message_actions():
         return make_response("", 200)
 
 
-'''
-
-___BLOCK FOR INNER FUNCS___
-
-'''
-
-
 def _command_handler(slack_event, subtype=None):
     global works_report_controller
 
@@ -163,19 +149,22 @@ def _command_handler(slack_event, subtype=None):
             return False
 
 
+global inviter_list
+global days_list
+days_list = []
+inviter_list = []
+
+
 def _event_handler(event_type, slack_event, subtype=None):
     global inviter_list
     global days_list
     global works_report_controller
-    days_list = []
-    inviter_list = []
 
     print('\nevent_type: ', event_type)
 
-    # TODO заготовка?
     if event_type == "message" and subtype == 'message_changed':
         if slack_event["event"].get('previous_message').get("text") in WorksReportController().questions:
-            # TODO если юзер выбрал короткий ответ, то больше не спрашивать его
+            # если юзер выбрал короткий ответ, то больше не спрашивать его
             print('user selects short answer: ', slack_event["event"].get("message").get("text"))
 
     if event_type == "message" and subtype != 'bot_message':
@@ -195,7 +184,7 @@ def _event_handler(event_type, slack_event, subtype=None):
                         user_id = member.get('id')
                         print('real_name :', real_name_user, 'user_id :', user_id)
 
-                        # TODO предыдущее вопрос?
+                        # предыдущее вопрос?
                         current_message, previous_message = _take_answer(slack_event)
                         if previous_message in WorksReportController().questions:
                             attachments = works_report_controller.remember_answer(answer=current_message,
@@ -204,17 +193,19 @@ def _event_handler(event_type, slack_event, subtype=None):
                                          message=attachments[0],
                                          attachments_json=attachments[1])
 
+                        # TODO продумать нормальный init бота
                         elif previous_message == 'Whom to invite?':
-                            inviter_list = current_message
+                            inviter_list.append(current_message)
                             send_message(_channel, str(inviter_list))
                             send_message(_channel, 'Days?')
 
                         elif previous_message == 'Days?':
                             print('EEEEEEEEEEEE')
-                            days_list = current_message
+                            days_list.append(current_message)
                             send_message(channel_id=_channel,
                                          message='Init',
                                          attachments_json=init_controller.create_report_init(inviter_list, days_list))
+                            inviter_list = [], days_list = []
                         return make_response("Message Sent", 200, )
 
     # ============= Event Type Not Found! ============= #
@@ -261,11 +252,6 @@ def _first_message():
 
 
 user_dm = _first_message()
-BOT_USER[_channel] = {
-    "order_channel": "DHCLCG8DQ",
-    "message_ts": "",
-    "order": {}
-}
 
 send_message(channel_id=_channel,
              message='Init new standUP',
