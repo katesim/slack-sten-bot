@@ -13,8 +13,13 @@ class WorksReportController:
         self.answers = []
 
     def take_short_answer(self, selection=str):
-
         for answer in self.short_answers:
             if selection == answer[0]:
                 message_text = answer[1]
         return message_text
+
+    def take_menu_options(self):
+        menu_options = dict(options=[])
+        for answer in self.short_answers:
+            menu_options['options'].append(dict(text=answer[1], value=answer[0]))
+        return menu_options

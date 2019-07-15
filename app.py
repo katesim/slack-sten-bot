@@ -79,22 +79,8 @@ def message_options():
     form_json = json.loads(request.form["payload"])
 
     # Dictionary of menu options which will be sent as JSON
-    menu_options = {
-        "options": [
-            {
-                "text": "Same as yesterday",
-                "value": "same_as_yesterday"
-            },
-            {
-                "text": "I'm busy right now",
-                "value": "busy"
-            },
-            {
-                "text": "I'm on vacation",
-                "value": "vacation"
-            }
-        ]
-    }
+    menu_options = works_report_controller.take_menu_options()
+    
     # Load options dict as JSON and respond to Slack
     return Response(json.dumps(menu_options), mimetype='application/json')
 
