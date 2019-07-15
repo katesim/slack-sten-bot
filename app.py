@@ -7,8 +7,9 @@ import time
 from pprint import pprint
 
 from WorksReportController import WorksReportController
+from InitController import InitController
 
-works_report_controller = WorksReportController()
+init_controller = InitController()
 
 app = Flask(__name__)
 
@@ -21,17 +22,8 @@ slack_client = SlackClient(SLACK_BOT_TOKEN)
 # List of commands for bot
 commands = ['/q', '/init']
 
-questions = ["What did you do yesterday? :coffee:",
-             "What are you planning do today?"]
-
-BOT_USER = {}
+# TODO избавиться от хардкода
 _channel = "DHCLCG8DQ"
-
-global question_counter
-question_counter = 0
-
-global answers
-answers = []
 
 
 @app.route('/', methods=['GET'])
@@ -65,36 +57,11 @@ def events():
                          you're looking for.", 404, {"X-Slack-No-Retry": 1})
 
 
-'''
-
-___BLOCK FOR INTERACTIVE MENU___
-
-'''
-
-
 # The endpoint Slack will load your menu options from
 @app.route("/slack/message_options", methods=["POST"])
 def message_options():
-    # Parse the request payload
-    form_json = json.loads(request.form["payload"])
-
     # Dictionary of menu options which will be sent as JSON
-    menu_options = {
-        "options": [
-            {
-                "text": "Same as yesterday",
-                "value": "same_as_yesterday"
-            },
-            {
-                "text": "I'm busy right now",
-                "value": "busy"
-            },
-            {
-                "text": "I'm on vacation",
-                "value": "vacation"
-            }
-        ]
-    }
+    menu_options = works_report_controller.take_menu_options()
     # Load options dict as JSON and respond to Slack
     return Response(json.dumps(menu_options), mimetype='application/json')
 
@@ -104,11 +71,10 @@ def message_options():
 def message_actions():
     # Parse the request payload
     form_json = json.loads(request.form["payload"])
-    print('\n\n\n\n', form_json["type"], '\n\n\n\n')
+    print('\n\n\nPAYLOAD:\n', form_json["type"], '\n\n\n\n')
     pprint(form_json)
     if form_json["type"] == "interactive_message":
         if form_json['actions'][0]['name'] == str("short_answer_list"):
-
             # Check to see what the user's selection was and update the message accordingly
             selection = form_json["actions"][0]["selected_options"][0]["value"]
             short_answer = works_report_controller.take_short_answer(selection)
@@ -128,39 +94,10 @@ def message_actions():
             open_dialog = slack_client.api_call(
                 "dialog.open",
                 trigger_id=form_json["trigger_id"],
-                dialog={
-                    "title": "Init new standUP",
-                    "submit_label": "Submit",
-                    "callback_id": form_json["channel"]["id"] + "coffee_order_form",
-                    "elements": [
-                        {
-                            "label": "Coffee Type",
-                            "type": "select",
-                            "name": "meal_preferences",
-                            "placeholder": "Select a time",
-                            "options": [
-                                {
-                                    "label": "10.30",
-                                    "value": "10.30"
-                                },
-                                {
-                                    "label": "11.00",
-                                    "value": "11.00"
-                                }
-                            ]
-                        },
-                        {
-                            "label": "Post this message on",
-                            "name": "channel_notify",
-                            "type": "select",
-                            "placeholder": "Select a channel",
-                            "data_source": "conversations"
-                        }
-                    ]
-                }
+                dialog=init_controller.create_dialog(form_json["channel"]["id"])
             )
 
-            print(open_dialog)
+            print('\nopen_dialog: ', open_dialog)
 
             # Update the message to show that we're in the process of taking their order
             slack_client.api_call(
@@ -176,122 +113,58 @@ def message_actions():
             return make_response("", 200)
 
     elif form_json["type"] == "dialog_submission":
-
-        pprint(form_json['response_url'])
-        # coffee_order = BOT_USER[_channel]
-        # # Update the message to show that we're in the process of taking their order
-        # slack_client.api_call(
-        #     "chat.update",
-        #     channel=_channel,
-        #     ts=coffee_order["message_ts"],
-        #     text=":white_check_mark: Order received!",
-        #     attachments=[]
-        # )
-
+        print("FORM response_url", form_json['response_url'])
         return make_response("", 200)
 
 
-'''
-
-___BLOCK FOR INNER FUNCS___
-
-'''
-
-
-def send_message(channel_id, message, attachments_json=[]):
-    slack_client.api_call(
-        "chat.postMessage",
-        channel=channel_id,
-        text=message,
-        icon_emoji=':robot_face:',
-        attachments=attachments_json
-    )
-
-
 def _command_handler(slack_event, subtype=None):
-    global question_counter
+    global works_report_controller
 
     if subtype != 'bot_message' and slack_event["event"].get("user"):
         if commands[0] in slack_event["event"].get("text"):
             print(commands[0], slack_event["event"].get("text"))
-            message = 'command q'
-            send_message(channel_id=slack_event["event"]["channel"], message=message,
+            send_message(channel_id=slack_event["event"]["channel"],
+                         message='command q',
                          attachments_json=[])
-            _answer_menu(questions[0])
-            question_counter = 0
+
+            works_report_controller = WorksReportController()
+            attachments = works_report_controller.answer_menu(works_report_controller.questions[0])
+            send_message(channel_id=slack_event["event"]["channel"], message=attachments[0],
+                         attachments_json=attachments[1])
             return True
 
         if commands[1] in slack_event["event"].get("text"):
             print(commands[1], slack_event["event"].get("text"))
             print('INPUT')
             print(slack_event["event"])
-            _init_menu()
+
+            send_message(channel_id=_channel,
+                         message='Init new standUP',
+                         attachments_json=init_controller.init_menu(channel=_channel))
+
             print('OPEN')
-            _answer_menu(questions[0])
-            question_counter = 0
             return True
 
         else:
             return False
 
 
-def _take_answer(slack_event):
-    conversations_history = requests.get(
-        "https://slack.com/api/conversations.history?token=" + SLACK_BOT_TOKEN
-        + "&channel=" + slack_event["event"]["channel"]
-        + "&latest=" + str(time.time())
-        + "&limit=2&inclusive=true").json()
+global inviter_list
+global days_list
+days_list = []
+inviter_list = []
 
-    answer = conversations_history['messages'][0]['text']
-    question = conversations_history['messages'][1]['text']
-    print('Вопрос: ', question)
-    print('Ответ: ', answer)
-    return answer, question
-
-
-def _send_report(slack_event, real_name_user, questions, answers):
-    attachments = [
-        {
-            "fallback": "Upgrade your Slack client to use messages like these.",
-            "color": "#3AA3E3",
-            "author_name": real_name_user,
-            "attachment_type": "default",
-            "title": "Report",
-            "text": str("*" + questions[0] + "* \n" + answers[0] + "\n*" + questions[1] + "* \n" + answers[1]),
-            "ts": time.time()
-        }
-    ]
-    send_message(channel_id=slack_event["event"]["channel"], message='New report',
-                 attachments_json=attachments)
-
-
-def _send_report_init(slack_event,  list_users, list_days):
-    attachments = [
-        {
-            "fallback": "Upgrade your Slack client to use messages like these.",
-            "color": "#3AA3E3",
-            "attachment_type": "default",
-            "title": "Report_init",
-            "text": str("* list_users: " + str(list_users) + "* \n list_days: " + str(list_days) + "\n*"),
-            "ts": time.time()
-        }
-    ]
-    send_message(channel_id=slack_event["event"]["channel"], message='New report',
-                 attachments_json=attachments)
 
 def _event_handler(event_type, slack_event, subtype=None):
-    global question_counter
     global inviter_list
     global days_list
-    days_list = []
-    inviter_list = []
+    global works_report_controller
 
     print('\nevent_type: ', event_type)
 
-    # TODO заготовка?
     if event_type == "message" and subtype == 'message_changed':
-        if slack_event["event"].get('previous_message').get("text") in questions:
-            # TODO если юзер выбрал короткий ответ, то больше не спрашивать его
+        if slack_event["event"].get('previous_message').get("text") in WorksReportController().questions:
+            # если юзер выбрал короткий ответ, то больше не спрашивать его
             print('user selects short answer: ', slack_event["event"].get("message").get("text"))
 
     if event_type == "message" and subtype != 'bot_message':
@@ -311,39 +184,28 @@ def _event_handler(event_type, slack_event, subtype=None):
                         user_id = member.get('id')
                         print('real_name :', real_name_user, 'user_id :', user_id)
 
-                        # TODO предыдущее вопрос?
+                        # предыдущее вопрос?
                         current_message, previous_message = _take_answer(slack_event)
-                        if previous_message in questions:
-                            answer = current_message
+                        if previous_message in WorksReportController().questions:
+                            attachments = works_report_controller.remember_answer(answer=current_message,
+                                                                                  real_name_user=real_name_user)
+                            send_message(channel_id=slack_event["event"]["channel"],
+                                         message=attachments[0],
+                                         attachments_json=attachments[1])
 
+                        # TODO продумать нормальный init бота
                         elif previous_message == 'Whom to invite?':
-                            inviter_list = current_message
+                            inviter_list.append(current_message)
                             send_message(_channel, str(inviter_list))
                             send_message(_channel, 'Days?')
 
                         elif previous_message == 'Days?':
                             print('EEEEEEEEEEEE')
-                            days_list = current_message
-                        #     send_message(_channel, str(days_list))
-                        #     send_message(_channel, 'Days?')
-                            _send_report_init(slack_event, inviter_list,days_list)
-
-                        else:
-                            answer = None
-                            # send_message(channel_id=slack_event["event"]["channel"], message="echo: " + current_message,
-                            #              attachments_json=[])
-                            return make_response("Message Sent", 200, )
-
-                        if answer:
-                            answers.append(answer)
-                            question_counter += 1
-
-                        try:
-                            _answer_menu(question=questions[question_counter])
-                        except:
-                            _send_report(slack_event, real_name_user, questions, answers)
-                            question_counter = 0
-
+                            days_list.append(current_message)
+                            send_message(channel_id=_channel,
+                                         message='Init',
+                                         attachments_json=init_controller.create_report_init(inviter_list, days_list))
+                            inviter_list = [], days_list = []
                         return make_response("Message Sent", 200, )
 
     # ============= Event Type Not Found! ============= #
@@ -353,60 +215,32 @@ def _event_handler(event_type, slack_event, subtype=None):
     return make_response(message, 200, {"X-Slack-No-Retry": 1})
 
 
-def _answer_menu(question="What did you do yesterday? :coffee:"):
-    # A Dictionary of message attachment options
-    attachments_json = [
-        {
-            "fallback": "Upgrade your Slack client to use messages like these.",
-            "color": "#3AA3E3",
-            "attachment_type": "default",
-            "callback_id": "menu_options_2319",
-            "actions": [
-                {
-                    "name": "short_answer_list",
-                    "text": "Pick a variant...",
-                    "type": "select",
-                    "data_source": "external"
-                }
-            ]
-        }
-    ]
-
-    # Send a message with the above attachment, asking the user if they want coffee
+def send_message(channel_id, message, attachments_json=[]):
     slack_client.api_call(
         "chat.postMessage",
-        channel=_channel,
-        text=question,
+        channel=channel_id,
+        text=message,
+        icon_emoji=':robot_face:',
         attachments=attachments_json
     )
 
 
-def _init_menu(question="Init new standUP"):
-    # A Dictionary of message attachment options
-    attachments_json = [{
-        "callback_id": _channel + "init_form",
-        "text": "",
-        "color": "#3AA3E3",
-        "attachment_type": "default",
-        "actions": [{
-            "name": "init_standup",
-            "text": ":coffee: Init new StandUP",
-            "type": "button",
-            "value": "init_standup"
-        }]
-    }]
+def _take_answer(slack_event):
+    conversations_history = requests.get(
+        "https://slack.com/api/conversations.history?token=" + SLACK_BOT_TOKEN
+        + "&channel=" + slack_event["event"]["channel"]
+        + "&latest=" + str(time.time())
+        + "&limit=2&inclusive=true").json()
 
-    # Send a message with the above attachment, asking the user if they want coffee
-    slack_client.api_call(
-        "chat.postMessage",
-        channel=_channel,
-        text=question,
-        attachments=attachments_json
-    )
+    answer = conversations_history['messages'][0]['text']
+    question = conversations_history['messages'][1]['text']
+    print('Вопрос: ', question)
+    print('Ответ: ', answer)
+    return answer, question
 
 
 def _first_message():
-    user_dm = slack_client.api_call(
+    return slack_client.api_call(
         "chat.postMessage",
         channel=_channel,
         text=str('Hello! :hand: '
@@ -415,17 +249,13 @@ def _first_message():
                                         '\n *' + commands[1] + '* - _init new task_'),
         attachments=[]
     )
-    return user_dm
 
 
 user_dm = _first_message()
-BOT_USER[_channel] = {
-    "order_channel": "DHCLCG8DQ",
-    "message_ts": "",
-    "order": {}
-}
-# _answer_menu()
-_init_menu()
+
+send_message(channel_id=_channel,
+             message='Init new standUP',
+             attachments_json=init_controller.init_menu(channel=_channel))
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
