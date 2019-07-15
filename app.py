@@ -230,20 +230,6 @@ def _take_answer(slack_event):
     return answer, question
 
 
-def _send_report_init(slack_event, list_users, list_days):
-    attachments = [
-        {
-            "fallback": "Upgrade your Slack client to use messages like these.",
-            "color": "#3AA3E3",
-            "attachment_type": "default",
-            "title": "Report_init",
-            "text": str("* list_users: " + str(list_users) + "* \n list_days: " + str(list_days) + "\n*"),
-            "ts": time.time()
-        }
-    ]
-    send_message(channel_id=slack_event["event"]["channel"], message='New report',
-                 attachments_json=attachments)
-
 def _event_handler(event_type, slack_event, subtype=None):
     global inviter_list
     global days_list
@@ -295,7 +281,10 @@ def _event_handler(event_type, slack_event, subtype=None):
                             days_list = current_message
                             #     send_message(_channel, str(days_list))
                             #     send_message(_channel, 'Days?')
-                            _send_report_init(slack_event, inviter_list, days_list)
+
+                            send_message(channel_id=_channel,
+                                         message='Init',
+                                         attachments_json=init_controller.create_report_init(inviter_list, days_list))
 
                         else:
                             answer = None
