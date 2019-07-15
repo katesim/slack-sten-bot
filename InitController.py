@@ -3,7 +3,9 @@ import time
 
 class InitController:
     def __init__(self):
-        pass
+        times = [(str(hour), str(minut)) for hour in range(7, 21) for minut in range(0, 60, 15)]
+        self.time_string = [x[0] + '.' + x[1] for x in times]
+        print('TIMES:', times)
 
     def init_menu(self, channel):
         return [{
@@ -30,3 +32,33 @@ class InitController:
                 "ts": time.time()
             }
         ]
+
+    def create_dialog(self, channel_id):
+        options = []
+        for time in self.time_string:
+            options.append(dict(
+                label=time,
+                value=time
+            ))
+
+        return {
+            "title": "Init new standUP",
+            "submit_label": "Submit",
+            "callback_id": channel_id + "coffee_order_form",
+            "elements": [
+                {
+                    "label": "Select time",
+                    "type": "select",
+                    "name": "meal_preferences",
+                    "placeholder": "Select a time",
+                    "options": options
+                },
+                {
+                    "label": "Post this message on",
+                    "name": "channel_notify",
+                    "type": "select",
+                    "placeholder": "Select a channel",
+                    "data_source": "conversations"
+                }
+            ]
+        }

@@ -104,36 +104,7 @@ def message_actions():
             open_dialog = slack_client.api_call(
                 "dialog.open",
                 trigger_id=form_json["trigger_id"],
-                dialog={
-                    "title": "Init new standUP",
-                    "submit_label": "Submit",
-                    "callback_id": form_json["channel"]["id"] + "coffee_order_form",
-                    "elements": [
-                        {
-                            "label": "Coffee Type",
-                            "type": "select",
-                            "name": "meal_preferences",
-                            "placeholder": "Select a time",
-                            "options": [
-                                {
-                                    "label": "10.30",
-                                    "value": "10.30"
-                                },
-                                {
-                                    "label": "11.00",
-                                    "value": "11.00"
-                                }
-                            ]
-                        },
-                        {
-                            "label": "Post this message on",
-                            "name": "channel_notify",
-                            "type": "select",
-                            "placeholder": "Select a channel",
-                            "data_source": "conversations"
-                        }
-                    ]
-                }
+                dialog=init_controller.create_dialog(form_json["channel"]["id"])
             )
 
             print(open_dialog)
