@@ -19,17 +19,9 @@ slack_client = SlackClient(SLACK_BOT_TOKEN)
 # List of commands for bot
 commands = ['/q', '/init']
 
-questions = ["What did you do yesterday? :coffee:",
-             "What are you planning do today?"]
 
 BOT_USER = {}
 _channel = "DHCLCG8DQ"
-
-global question_counter
-question_counter = 0
-
-global answers
-answers = []
 
 
 @app.route('/', methods=['GET'])
@@ -190,7 +182,6 @@ def send_message(channel_id, message, attachments_json=[]):
 
 
 def _command_handler(slack_event, subtype=None):
-    global question_counter
     global works_report_controller
 
     if subtype != 'bot_message' and slack_event["event"].get("user"):
@@ -247,9 +238,9 @@ def _send_report_init(slack_event, list_users, list_days):
                  attachments_json=attachments)
 
 def _event_handler(event_type, slack_event, subtype=None):
-    global question_counter
     global inviter_list
     global days_list
+    global works_report_controller
     days_list = []
     inviter_list = []
 
@@ -257,7 +248,7 @@ def _event_handler(event_type, slack_event, subtype=None):
 
     # TODO заготовка?
     if event_type == "message" and subtype == 'message_changed':
-        if slack_event["event"].get('previous_message').get("text") in questions:
+        if slack_event["event"].get('previous_message').get("text") in WorksReportController().questions:
             # TODO если юзер выбрал короткий ответ, то больше не спрашивать его
             print('user selects short answer: ', slack_event["event"].get("message").get("text"))
 
@@ -280,7 +271,7 @@ def _event_handler(event_type, slack_event, subtype=None):
 
                         # TODO предыдущее вопрос?
                         current_message, previous_message = _take_answer(slack_event)
-                        if previous_message in questions:
+                        if previous_message in WorksReportController().questions:
                             attachments = works_report_controller.remember_answer(answer=current_message,
                                                                                   real_name_user=real_name_user)
                             send_message(channel_id=slack_event["event"]["channel"],
