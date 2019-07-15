@@ -14,10 +14,13 @@ SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN")
 slack_client = SlackClient(SLACK_BOT_TOKEN)
 
 # List of commands for bot
-commands = ['/q']
+commands = ['/q', '/init']
 
 questions = ["What did you do yesterday? :coffee:",
              "What are you planning do today?"]
+
+BOT_USER = {}
+_channel = "DHCLCG8DQ"
 
 global question_counter
 question_counter = 0
@@ -96,27 +99,105 @@ def message_options():
 def message_actions():
     # Parse the request payload
     form_json = json.loads(request.form["payload"])
+    print('\n\n\n\n', form_json["type"], '\n\n\n\n')
+    pprint(form_json)
+    if form_json["type"] == "interactive_message":
+        if form_json['actions'][0]['name'] == str("short_answer_list"):
 
-    # Check to see what the user's selection was and update the message accordingly
-    selection = form_json["actions"][0]["selected_options"][0]["value"]
+            # Check to see what the user's selection was and update the message accordingly
+            selection = form_json["actions"][0]["selected_options"][0]["value"]
 
-    if selection == "same_as_yesterday":
-        message_text = "Same as yesterday"
-    elif selection == "busy":
-        message_text = "I'm busy right now"
-    else:
-        message_text = "I'm on vacation"
+            if selection == "same_as_yesterday":
+                message_text = "Same as yesterday"
+            elif selection == "busy":
+                message_text = "I'm busy right now"
+            else:
+                message_text = "I'm on vacation"
 
-    response = slack_client.api_call(
-        "chat.update",
-        channel=form_json["channel"]["id"],
-        ts=form_json["message_ts"],
-        text="Your answer is {}  :coffee:".format(message_text),
-        attachments=[]  # empty `attachments` to clear the existing massage attachments
-    )
+            response = slack_client.api_call(
+                "chat.update",
+                channel=form_json["channel"]["id"],
+                ts=form_json["message_ts"],
+                text="Your answer is {}  :coffee:".format(message_text),
+                attachments=[]  # empty `attachments` to clear the existing massage attachments
+            )
 
-    # Send an HTTP 200 response with empty body so Slack knows we're done here
-    return make_response("", 200)
+            response = slack_client.api_call(
+                "chat.update",
+                channel=form_json["channel"]["id"],
+                ts=form_json["message_ts"],
+                text="Your answer is {}  :coffee:".format(short_answer),
+                attachments=[]  # empty `attachments` to clear the existing massage attachments
+            )
+
+            # Send an HTTP 200 response with empty body so Slack knows we're done here
+            return make_response("", 200)
+
+        if form_json['actions'][0]['name'] == "init_standup":
+            open_dialog = slack_client.api_call(
+                "dialog.open",
+                trigger_id=form_json["trigger_id"],
+                dialog={
+                    "title": "Init new standUP",
+                    "submit_label": "Submit",
+                    "callback_id": form_json["channel"]["id"] + "coffee_order_form",
+                    "elements": [
+                        {
+                            "label": "Coffee Type",
+                            "type": "select",
+                            "name": "meal_preferences",
+                            "placeholder": "Select a time",
+                            "options": [
+                                {
+                                    "label": "10.30",
+                                    "value": "10.30"
+                                },
+                                {
+                                    "label": "11.00",
+                                    "value": "11.00"
+                                }
+                            ]
+                        },
+                        {
+                            "label": "Post this message on",
+                            "name": "channel_notify",
+                            "type": "select",
+                            "placeholder": "Select a channel",
+                            "data_source": "conversations"
+                        }
+                    ]
+                }
+            )
+
+            print(open_dialog)
+
+            # Update the message to show that we're in the process of taking their order
+            slack_client.api_call(
+                "chat.update",
+                channel=_channel,
+                ts=form_json["message_ts"],
+                text=":pencil: Noted your answers",
+                attachments=[]
+            )
+
+            send_message(_channel, 'Whom to invite?')
+
+            return make_response("", 200)
+
+    elif form_json["type"] == "dialog_submission":
+
+        pprint(form_json['response_url'])
+        # coffee_order = BOT_USER[_channel]
+        # # Update the message to show that we're in the process of taking their order
+        # slack_client.api_call(
+        #     "chat.update",
+        #     channel=_channel,
+        #     ts=coffee_order["message_ts"],
+        #     text=":white_check_mark: Order received!",
+        #     attachments=[]
+        # )
+
+        return make_response("", 200)
 
 
 '''
@@ -148,6 +229,17 @@ def _command_handler(slack_event, subtype=None):
             _answer_menu(questions[0])
             question_counter = 0
             return True
+
+        if commands[1] in slack_event["event"].get("text"):
+            print(commands[1], slack_event["event"].get("text"))
+            print('INPUT')
+            print(slack_event["event"])
+            _init_menu()
+            print('OPEN')
+            _answer_menu(questions[0])
+            question_counter = 0
+            return True
+
         else:
             return False
 
@@ -182,8 +274,26 @@ def _send_report(slack_event, real_name_user, questions, answers):
                  attachments_json=attachments)
 
 
+def _send_report_init(slack_event,  list_users, list_days):
+    attachments = [
+        {
+            "fallback": "Upgrade your Slack client to use messages like these.",
+            "color": "#3AA3E3",
+            "attachment_type": "default",
+            "title": "Report_init",
+            "text": str("* list_users: " + str(list_users) + "* \n list_days: " + str(list_days) + "\n*"),
+            "ts": time.time()
+        }
+    ]
+    send_message(channel_id=slack_event["event"]["channel"], message='New report',
+                 attachments_json=attachments)
+
 def _event_handler(event_type, slack_event, subtype=None):
     global question_counter
+    global inviter_list
+    global days_list
+    days_list = []
+    inviter_list = []
 
     print('\nevent_type: ', event_type)
 
@@ -214,11 +324,24 @@ def _event_handler(event_type, slack_event, subtype=None):
                         current_message, previous_message = _take_answer(slack_event)
                         if previous_message in questions:
                             answer = current_message
+
+                        elif previous_message == 'Whom to invite?':
+                            inviter_list = current_message
+                            send_message(_channel, str(inviter_list))
+                            send_message(_channel, 'Days?')
+
+                        elif previous_message == 'Days?':
+                            print('EEEEEEEEEEEE')
+                            days_list = current_message
+                        #     send_message(_channel, str(days_list))
+                        #     send_message(_channel, 'Days?')
+                            _send_report_init(slack_event, inviter_list,days_list)
+
                         else:
                             answer = None
-                            send_message(channel_id=slack_event["event"]["channel"], message="echo: " + current_message,
-                                         attachments_json=[])
-                            break
+                            # send_message(channel_id=slack_event["event"]["channel"], message="echo: " + current_message,
+                            #              attachments_json=[])
+                            return make_response("Message Sent", 200, )
 
                         if answer:
                             answers.append(answer)
@@ -249,8 +372,8 @@ def _answer_menu(question="What did you do yesterday? :coffee:"):
             "callback_id": "menu_options_2319",
             "actions": [
                 {
-                    "name": "bev_list",
-                    "text": "Pick a beverage...",
+                    "name": "short_answer_list",
+                    "text": "Pick a variant...",
                     "type": "select",
                     "data_source": "external"
                 }
@@ -261,25 +384,57 @@ def _answer_menu(question="What did you do yesterday? :coffee:"):
     # Send a message with the above attachment, asking the user if they want coffee
     slack_client.api_call(
         "chat.postMessage",
-        channel="DHCLCG8DQ",
+        channel=_channel,
+        text=question,
+        attachments=attachments_json
+    )
+
+
+def _init_menu(question="Init new standUP"):
+    # A Dictionary of message attachment options
+    attachments_json = [{
+        "callback_id": _channel + "init_form",
+        "text": "",
+        "color": "#3AA3E3",
+        "attachment_type": "default",
+        "actions": [{
+            "name": "init_standup",
+            "text": ":coffee: Init new StandUP",
+            "type": "button",
+            "value": "init_standup"
+        }]
+    }]
+
+    # Send a message with the above attachment, asking the user if they want coffee
+    slack_client.api_call(
+        "chat.postMessage",
+        channel=_channel,
         text=question,
         attachments=attachments_json
     )
 
 
 def _first_message():
-    slack_client.api_call(
+    user_dm = slack_client.api_call(
         "chat.postMessage",
-        channel="DHCLCG8DQ",
+        channel=_channel,
         text=str('Hello! :hand: '
                  '\nAvailable commands:'
-                 '\n *' + commands[0] + '* - _send questions_'),
+                 '\n *' + commands[0] + '* - _send questions_'
+                                        '\n *' + commands[1] + '* - _init new task_'),
         attachments=[]
     )
+    return user_dm
 
 
-_first_message()
-_answer_menu()
+user_dm = _first_message()
+BOT_USER[_channel] = {
+    "order_channel": "DHCLCG8DQ",
+    "message_ts": "",
+    "order": {}
+}
+# _answer_menu()
+_init_menu()
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
