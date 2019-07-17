@@ -41,30 +41,13 @@ class DBController:
         groups = cls.groups.find(filter_fields).sort('serial_id', pymongo.ASCENDING)
         return groups
 
+    @classmethod
+    def remove_groups(cls, filter_fields=None):
+        filter_fields = filter_fields if filter_fields else dict()
+        cls.groups.remove(filter_fields)
+
 
 if __name__ == '__main__':
     DBController.first_setup()
-
-    ts = '12341234'
-    group = {'channel': '111',
-             'users': ['Kate', 'Liza'],
-             'times': {"weekdays": ['Fr', 'Mon'],
-                       "times": '10.00'},
-             "reports": [{'id_user': 'str',
-                          'answers': [('What did you do yesterday?', 'work', ts),
-                                      ('What are you planning do today?', 'rest', ts),
-                                      ('Any promlem?', 'No', ts)
-                                      ]
-                          },
-                         {'id_user': 'str',
-                          'answers': [('What did you do yesterday?', 'love', ts),
-                                      ('What are you planning do today?', 'work', ts),
-                                      ('Any promlem?', 'No', ts)
-                                      ]
-                          }
-                         ],
-             "ts_report": '45674567'
-             }
-
-    DBController.add_group(group, str(uuid.uuid4()))
+    DBController.add_group(group={}, uuid=str(uuid.uuid4()))
     pprint(DBController.get_group(0))
