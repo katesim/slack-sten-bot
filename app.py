@@ -188,6 +188,7 @@ def _event_handler(event_type, slack_event, subtype=None):
                         current_message, previous_message = _take_answer(slack_event)
                         if previous_message in WorksReportController().questions:
                             attachments = works_report_controller.remember_answer(answer=current_message,
+                                                                                  question=previous_message,
                                                                                   real_name_user=real_name_user)
                             send_message(channel_id=slack_event["event"]["channel"],
                                          message=attachments[0],
