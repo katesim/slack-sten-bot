@@ -31,6 +31,14 @@ commands = ['/q', '/init']
 _channel = "DL9QABUBT"
 _bot_mentioning = "<@ULJ0QF87R>"
 
+global inviter_list
+global days_list
+global works_report_controller
+
+days_list = []
+inviter_list = []
+works_report_controller = WorksReportController()
+
 
 @app.route('/', methods=['GET'])
 def webhook():
@@ -40,6 +48,7 @@ def webhook():
 # The endpoint Slack will load your menu options from
 @app.route("/slack/message_options", methods=["POST"])
 def message_options():
+    global works_report_controller
     # Dictionary of menu options which will be sent as JSON
     menu_options = works_report_controller.take_menu_options()
     # Load options dict as JSON and respond to Slack
@@ -84,8 +93,7 @@ def message_actions():
                 "chat.update",
                 channel=_channel,
                 ts=form_json["message_ts"],
-                text=":pencil: Note your answers",
-                attachments=[]
+                text=":pencil: Note your answers"
             )
 
             # send_message(_channel, 'Whom to invite?')
@@ -100,7 +108,6 @@ def message_actions():
         print("FORM response_url", form_json['response_url'])
         return make_response("", 200)
 
-
 def _command_handler(channel, user, message):
     global works_report_controller
 
@@ -110,7 +117,7 @@ def _command_handler(channel, user, message):
                                 channel=channel,
                                 text="command q")
 
-        works_report_controller = WorksReportController()
+        # works_report_controller = WorksReportController()
         attachments = works_report_controller.answer_menu(works_report_controller.questions[0])
         slack_client.api_call("chat.postMessage",
                                 channel=channel,
@@ -125,7 +132,7 @@ def _command_handler(channel, user, message):
         slack_client.api_call("chat.postMessage",
                                 channel=channel,
                                 text="Init new standUP",
-                                attachments=init_controller.init_menu(channel=_channel))
+                                attachments=init_controller.init_menu(channel=channel))
         print('OPEN')
         return True
 
@@ -183,7 +190,7 @@ def _user_interactive_message_handler(message_event):
                 elif previous_message == 'Days?':
                     print('EEEEEEEEEEEE')
                     days_list.append(current_message)
-                    slack_client.api_call("char.postMessage",
+                    slack_client.api_call("chat.postMessage",
                                     channel=_channel,
                                     text='Init',
                                     attachments=init_controller.create_report_init(inviter_list, days_list))
@@ -209,7 +216,6 @@ def _take_answer(slack_event):
     print('Ответ: ', answer)
     return answer, question
 
-
 def _first_message(channel):
     return slack_client.api_call("chat.postMessage",
                                     channel=channel,
@@ -217,13 +223,6 @@ def _first_message(channel):
                                             '\nAvailable commands:'
                                             '\n *' + commands[0] + '* - _send questions_'
                                             '\n *' + commands[1] + '* - _init new task_'))
-
-
-# user_dm = _first_message()
-
-# send_message(channel_id=_channel,
-            #  message='Init new standUP',
-            #  attachments_json=init_controller.init_menu(channel=_channel))
 
 # bot mentioning in channel
 @slack_events_adapter.on('app_mention')
@@ -255,8 +254,6 @@ def message(event):
         # ============= DIRECT MESSAGE FROM USER ============= #
         if channel[0] == "D":
                        
-            # pprint(event)
-            # print("\n")
             user = message_event["user"]
             message = message_event["text"]
 
@@ -264,30 +261,21 @@ def message(event):
             # ============= USER MENTIONED BOT IN DIRECT MESSAGE TO BOT ============= #
             if _bot_mentioning in message:
                 print("BOT WAS MENTIONED IN DIRECT MESSAGE FROM USER", "\n")
-                slack_client.api_call("chat.postMessage",
-                                     channel=channel, 
-                                     text="bot mentioned")
                 _command_handler(channel, user, message)
             # ============= SIMPLE DIRECT MESSAGE FROM USER ============= #
             else:
                 print("DIRECT MESSAGE FROM USER TO BOT")
-                slack_client.api_call("chat.postMessage",
-                                        channel=channel, 
-                                        text="direct message from user to bot")
                 _user_interactive_message_handler(message_event)
-                #_direct_message_handler(channel, user, message, subtype, event)
         # ============= CHANNEL MESSAGE FROM USER ============= #   
         else:
             print("CHANNEL MESSAGE FROM USER")
-            #pprint(event)
-            #print("\n")
+            
     # ============= MESSAGE FROM BOT ============= #
     if subtype == "bot_message" and message_event.get("attachments") != None:
         print("BOT INTERACTIVE MESSAGE")
         # pprint(event)
         #_bot_interactive_message_handler(message_event)
-            
-                  
+                   
 # process direct bot message
 @slack_events_adapter.on('message.im')
 def direct_bot_message(event):
@@ -297,8 +285,6 @@ def direct_bot_message(event):
     
     if event["event"].get("subtype") != "bot_message":
         print("user direct chat")
-        slack_client.api_call("chat.postMessage", channel=channel, text="user direct chat")
-    #_direct_message_handler(channel, user, message, subtype, event)
 
 @slack_events_adapter.on('bot_added')
 def bot_added(event):
