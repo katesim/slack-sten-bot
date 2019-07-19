@@ -263,7 +263,7 @@ def message(event):
     pprint(event)
     print("\n")
     # ============= MESSAGE FROM USER ============= #
-    if subtype is None:
+    if subtype != "bot_message":
 
         channel = message_event["channel"]
         # D means direct messages
