@@ -158,23 +158,15 @@ def _message_handler(message_event):
             print('USER SELECTED SHORT ANSWER: ', message)
 
     if user:
-        users_list = requests.get("https://slack.com/api/users.list?token=" + SLACK_BOT_TOKEN).json()
-        print('STEP1')
-        for member in users_list['members']:
-            print('STEP2', member)
-            if member.get("id") == user:
-                print()
-                real_name_user = member.get("profile").get("display_name")
-                user_id = member.get('id')
-                print('real_name :', real_name_user, 'user_id :', user_id)
-
+        real_user_name = get_real_user_name(user)
+        
         # предыдущее вопрос?
         current_message, previous_message = _take_answer(message_event)
         print('current_message, previous_message', current_message, previous_message)
         if previous_message in WorksReportController().questions:
             attachments = works_report_controller.remember_answer(answer=current_message,
                                                                   question=previous_message,
-                                                                  real_name_user=real_name_user)
+                                                                  real_user_name=real_user_name)
             slack_client.api_call("chat.postMessage",
                                   channel=channel,
                                   text=attachments[0],
@@ -203,8 +195,16 @@ def _message_handler(message_event):
     # If the event_type does not have a handler
     # message = "You have not added an event handler for the %s" % event_type
     # Return a helpful error message
-    return make_response(message, 200, {"X-Slack-No-Retry": 1})
+    #return make_response(message, 200, {"X-Slack-No-Retry": 1})
 
+def get_real_user_name(user_id):
+    users_list = requests.get("https://slack.com/api/users.list?token=" + SLACK_BOT_TOKEN).json()
+    for member in users_list['members']:
+        if member.get("id") == user_id:
+            real_user_name = member.get("profile").get("display_name")
+            user_id = member.get('id')
+            print('real_name :', real_user_name, 'user_id :', user_id)
+    return real_user_name
 
 def _take_answer(slack_event):
     conversations_history = requests.get(
@@ -226,7 +226,7 @@ def _first_message(channel):
                                  text=str('Hello! :hand: '
                                           '\nAvailable commands:'
                                           '\n *' + commands[0] + '* - _send questions_'
-                                                                 '\n *' + commands[1] + '* - _init new task_'))
+                                          '\n *' + commands[1] + '* - _init new task_'))
 
 
 # bot mentioning in channel

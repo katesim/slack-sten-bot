@@ -57,14 +57,14 @@ class WorksReportController:
             menu_options['options'].append(dict(text=answer[1], value=answer[0]))
         return menu_options
 
-    def remember_answer(self, question, answer, real_name_user, ts_answer=None):
+    def remember_answer(self, question, answer, real_user_name, ts_answer=None):
         self.report.add_answer(self.Cell(question, answer, ts_answer))
         self.question_counter += 1
         try:
             return self.answer_menu(question=self.questions[self.question_counter])
         except:
             self.question_counter = 0
-            return self.create_report(real_name_user)
+            return self.create_report(real_user_name)
 
     def answer_menu(self, question="What did you do yesterday? :coffee:"):
         return (question, [
