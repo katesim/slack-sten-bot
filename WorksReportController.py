@@ -32,7 +32,7 @@ class WorksReportController:
     def __init__(self, questions=None, short_answers=None):
         if questions is None:
             questions = ["What did you do yesterday? :coffee:",
-                         "What are you planning do today?"]
+                         "What are you planning to do today?"]
         if short_answers is None:
             short_answers = [("same_as_yesterday", "Same as yesterday"),
                              ("busy", "I'm busy right now"),
