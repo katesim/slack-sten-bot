@@ -105,7 +105,18 @@ def message_actions():
 
     elif form_json["type"] == "dialog_submission":
         print("FORM response_url", form_json['response_url'])
+        submission = form_json.get("submission")
+        time, channel_to_attach = get_menu_answers(submission)
         return make_response("", 200)
+    
+def get_menu_answers(submission):
+    time = None
+    channel_to_attach = None
+    if submission:
+        time = submission.get("meal_preferences")
+        channel_to_attach = submission.get("channel_notify")
+    print("TIME:", time, "CHANNEL:", channel_to_attach)
+    return time, channel_to_attach
 
 
 def _command_handler(channel, user, message):
@@ -264,7 +275,7 @@ def message(event):
 
             # bot mentioning implies command
             # ============= USER MENTIONED BOT IN DIRECT MESSAGE TO BOT ============= #
-            if '/q' in message:
+            if '<@ULJ0QF87R>' in message:
                 print("BOT WAS MENTIONED IN DIRECT MESSAGE FROM USER", "\n")
                 _command_handler(channel, user, message)
             # ============= SIMPLE DIRECT MESSAGE FROM USER ============= #
