@@ -107,21 +107,22 @@ def message_actions():
         print("FORM response_url", form_json['response_url'])
         return make_response("", 200)
 
+
 def _command_handler(channel, user, message):
     global works_report_controller
 
     if commands[0] in message:
         print(commands[0], message)
         slack_client.api_call("chat.postMessage",
-                                channel=channel,
-                                text="command q")
+                              channel=channel,
+                              text="command q")
 
         # works_report_controller = WorksReportController()
         attachments = works_report_controller.answer_menu(works_report_controller.questions[0])
         slack_client.api_call("chat.postMessage",
-                                channel=channel,
-                                text=attachments[0],
-                                attachments=attachments[1])
+                              channel=channel,
+                              text=attachments[0],
+                              attachments=attachments[1])
         return True
 
     if commands[1] in message:
@@ -129,14 +130,15 @@ def _command_handler(channel, user, message):
         print('INPUT')
 
         slack_client.api_call("chat.postMessage",
-                                channel=channel,
-                                text="Init new standUP",
-                                attachments=init_controller.init_menu(channel=channel))
+                              channel=channel,
+                              text="Init new standUP",
+                              attachments=init_controller.init_menu(channel=channel))
         print('OPEN')
         return True
 
     else:
         return False
+
 
 def _message_handler(message_event):
     global inviter_list
@@ -151,55 +153,58 @@ def _message_handler(message_event):
     if message_event.get("previous_message"):
         message_before_change = message_event.get("previous_message").get("text")
 
-
     if subtype == 'message_changed':
         if message_before_change in WorksReportController().questions:
             print('USER SELECTED SHORT ANSWER: ', message)
 
     if user:
         users_list = requests.get("https://slack.com/api/users.list?token=" + SLACK_BOT_TOKEN).json()
-
+        print('STEP1')
         for member in users_list['members']:
+            print('STEP2', member)
             if member.get("id") == user:
+                print()
                 real_name_user = member.get("profile").get("display_name")
                 user_id = member.get('id')
                 print('real_name :', real_name_user, 'user_id :', user_id)
 
-                        # предыдущее вопрос?
-                        current_message, previous_message = _take_answer(message_event)
-                        if previous_message in WorksReportController().questions:
-                            attachments = works_report_controller.remember_answer(answer=current_message,
-                                                                                  question=previous_message,
-                                                                                  real_name_user=real_name_user)
-                            slack_client.api_call("chat.postMessage",
-                                                  channel=channel,
-                                                  text=attachments[0],
-                                                  attachments=attachments[1])
-                # TODO продумать нормальный init бота
-                elif previous_message == 'Whom to invite?':
-                    inviter_list.append(current_message)
-                    slack_client.api_call("chat.postMessage",
-                                            channel = channel,
-                                            text = str(inviter_list))
-                    slack_client.api_call("chat.postMessage",
-                                            channel = channel,
-                                            text = 'Days?')
+        # предыдущее вопрос?
+        current_message, previous_message = _take_answer(message_event)
+        print('current_message, previous_message', current_message, previous_message)
+        if previous_message in WorksReportController().questions:
+            attachments = works_report_controller.remember_answer(answer=current_message,
+                                                                  question=previous_message,
+                                                                  real_name_user=real_name_user)
+            slack_client.api_call("chat.postMessage",
+                                  channel=channel,
+                                  text=attachments[0],
+                                  attachments=attachments[1])
+        # TODO продумать нормальный init бота
+        elif previous_message == 'Whom to invite?':
+            inviter_list.append(current_message)
+            slack_client.api_call("chat.postMessage",
+                                  channel=channel,
+                                  text=str(inviter_list))
+            slack_client.api_call("chat.postMessage",
+                                  channel=channel,
+                                  text='Days?')
 
-                elif previous_message == 'Days?':
-                    days_list.append(current_message)
-                    slack_client.api_call("chat.postMessage",
-                                    channel= channel,
-                                    text='Init',
-                                    attachments=init_controller.create_report_init(inviter_list, days_list))
-                    inviter_list = []
-                    days_list = []
-                return make_response("Message Sent", 200, )
+        elif previous_message == 'Days?':
+            days_list.append(current_message)
+            slack_client.api_call("chat.postMessage",
+                                  channel=channel,
+                                  text='Init',
+                                  attachments=init_controller.create_report_init(inviter_list, days_list))
+            inviter_list = []
+            days_list = []
+    return make_response("Message Sent", 200, )
 
     # ============= Event Type Not Found! ============= #
     # If the event_type does not have a handler
-    message = "You have not added an event handler for the %s" % event_type
+    # message = "You have not added an event handler for the %s" % event_type
     # Return a helpful error message
     return make_response(message, 200, {"X-Slack-No-Retry": 1})
+
 
 def _take_answer(slack_event):
     conversations_history = requests.get(
@@ -214,18 +219,19 @@ def _take_answer(slack_event):
     print('Ответ: ', answer)
     return answer, question
 
+
 def _first_message(channel):
     return slack_client.api_call("chat.postMessage",
-                                    channel=channel,
-                                    text=str('Hello! :hand: '
-                                            '\nAvailable commands:'
-                                            '\n *' + commands[0] + '* - _send questions_'
-                                            '\n *' + commands[1] + '* - _init new task_'))
+                                 channel=channel,
+                                 text=str('Hello! :hand: '
+                                          '\nAvailable commands:'
+                                          '\n *' + commands[0] + '* - _send questions_'
+                                                                 '\n *' + commands[1] + '* - _init new task_'))
+
 
 # bot mentioning in channel
 @slack_events_adapter.on('app_mention')
 def app_mention(event):
-
     print("APP MENTIONED\n", event)
     print("\n")
     channel = event["event"]["channel"]
@@ -234,6 +240,7 @@ def app_mention(event):
     #             channel = channel,
     #             text="Привет, я StenBot!\n" +\
     #                  "Напиши мне, чтобы создать опрос\n")
+
 
 # process direct bot message
 @slack_events_adapter.on('message')
@@ -257,7 +264,7 @@ def message(event):
 
             # bot mentioning implies command
             # ============= USER MENTIONED BOT IN DIRECT MESSAGE TO BOT ============= #
-            if _bot_mentioning in message:
+            if '/q' in message:
                 print("BOT WAS MENTIONED IN DIRECT MESSAGE FROM USER", "\n")
                 _command_handler(channel, user, message)
             # ============= SIMPLE DIRECT MESSAGE FROM USER ============= #
@@ -272,7 +279,8 @@ def message(event):
     if subtype == "bot_message" and message_event.get("attachments") != None:
         print("BOT INTERACTIVE MESSAGE")
         # pprint(event)
-        #_bot_interactive_message_handler(message_event)
+        # _bot_interactive_message_handler(message_event)
+
 
 @slack_events_adapter.on('bot_added')
 def bot_added(event):
