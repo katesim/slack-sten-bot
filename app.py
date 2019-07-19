@@ -14,21 +14,24 @@ init_controller = InitController()
 
 app = Flask(__name__)
 
-# Your app's Slack bot user token
-SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN")
-# Your Slack app's token (Basic informatiom Signing Secret)
-SLACK_TOKEN = os.environ.get("SLACK_TOKEN")
+# # Your app's Slack bot user token
+# SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN")
+# # Your Slack app's token (Basic informatiom Signing Secret)
+# SIGNING_SECRET = os.environ.get("SIGNING_SECRET")
+
+SLACK_BOT_TOKEN = "xoxb-605632090359-698024518263-1ZW5b2c4AEaOt9Tb1cTGQJSm"
+SIGNING_SECRET = "48fdafc6ec5ba374f80ecb204c798376"
+
 
 # Slack client for Web API requests
 slack_client = SlackClient(SLACK_BOT_TOKEN)
 # Slack event adapter API to process events
-slack_events_adapter = SlackEventAdapter(SLACK_TOKEN, "/slack/events", app)
+slack_events_adapter = SlackEventAdapter(SIGNING_SECRET, "/slack/events", app)
 
 # List of commands for bot
 commands = ['/q', '/init']
 
 # TODO избавиться от хардкода
-_channel = "DL9QABUBT"
 _bot_mentioning = "<@ULJ0QF87R>"
 
 global inviter_list
@@ -62,6 +65,8 @@ def message_actions():
     form_json = json.loads(request.form["payload"])
     print('\n\n\nPAYLOAD:\n', form_json["type"], '\n\n\n\n')
     pprint(form_json)
+
+    channel = form_json["channel"]["id"]
     if form_json["type"] == "interactive_message":
         if form_json['actions'][0]['name'] == str("short_answer_list"):
             # Check to see what the user's selection was and update the message accordingly
@@ -91,7 +96,7 @@ def message_actions():
             # Update the message to show that we're in the process of taking their order
             slack_client.api_call(
                 "chat.update",
-                channel=_channel,
+                channel=channel,
                 ts=form_json["message_ts"],
                 text=":pencil: Note your answers"
             )
@@ -99,7 +104,7 @@ def message_actions():
             # send_message(_channel, 'Whom to invite?')
             slack_client.api_call(
                 "chat.postMessage",
-                channel=_channel,
+                channel=channel,
                 text="Whom to invite?"
             )
             return make_response("", 200)
@@ -139,7 +144,7 @@ def _command_handler(channel, user, message):
     else:
         return False
 
-def _user_interactive_message_handler(message_event):
+def _message_handler(message_event):
     global inviter_list
     global days_list
     global works_report_controller
@@ -148,13 +153,13 @@ def _user_interactive_message_handler(message_event):
     channel = message_event.get("channel")
     message = message_event.get("text")
     user = message_event.get("user")
-    previous_message = None
+    message_before_change = None
     if message_event.get("previous_message"):
-        previous_message = message_event.get("previous_message").get("text")
+        message_before_change = message_event.get("previous_message").get("text")
 
 
     if subtype == 'message_changed':  
-        if previous_message in WorksReportController().questions:
+        if message_before_change in WorksReportController().questions:
             # если юзер выбрал короткий ответ, то больше не спрашивать его
             print('USER SELECTED SHORT ANSWER: ', message)
 
@@ -181,20 +186,21 @@ def _user_interactive_message_handler(message_event):
                 elif previous_message == 'Whom to invite?':
                     inviter_list.append(current_message)
                     slack_client.api_call("chat.postMessage",
-                                            channel = _channel,
+                                            channel = channel,
                                             text = str(inviter_list))
                     slack_client.api_call("chat.postMessage",
-                                            channel = _channel,
+                                            channel = channel,
                                             text = 'Days?')
 
                 elif previous_message == 'Days?':
                     print('EEEEEEEEEEEE')
                     days_list.append(current_message)
                     slack_client.api_call("chat.postMessage",
-                                    channel=_channel,
+                                    channel= channel,
                                     text='Init',
                                     attachments=init_controller.create_report_init(inviter_list, days_list))
-                    inviter_list = [], days_list = []
+                    inviter_list = []
+                    days_list = []
                 return make_response("Message Sent", 200, )
 
     # ============= Event Type Not Found! ============= #
@@ -265,7 +271,7 @@ def message(event):
             # ============= SIMPLE DIRECT MESSAGE FROM USER ============= #
             else:
                 print("DIRECT MESSAGE FROM USER TO BOT")
-                _user_interactive_message_handler(message_event)
+                _message_handler(message_event)
         # ============= CHANNEL MESSAGE FROM USER ============= #   
         else:
             print("CHANNEL MESSAGE FROM USER")
@@ -275,16 +281,6 @@ def message(event):
         print("BOT INTERACTIVE MESSAGE")
         # pprint(event)
         #_bot_interactive_message_handler(message_event)
-                   
-# process direct bot message
-@slack_events_adapter.on('message.im')
-def direct_bot_message(event):
-    print("DIRECT MESSAGE\n", event)
-    print("\n")
-    channel = event["event"]["channel"]
-    
-    if event["event"].get("subtype") != "bot_message":
-        print("user direct chat")
 
 @slack_events_adapter.on('bot_added')
 def bot_added(event):
