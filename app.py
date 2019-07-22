@@ -24,6 +24,7 @@ BOT_MENTIONED = os.environ.get("BOT_MENTIONED")
 slack_client = SlackClient(SLACK_BOT_TOKEN)
 # Slack event adapter API to process events
 slack_events_adapter = SlackEventAdapter(SIGNING_SECRET, "/slack/events", app)
+schedule.run_continuously()
 
 # List of commands for bot
 commands = ['/q', '/init', '/schedule']
@@ -118,65 +119,52 @@ def get_menu_answers(submission):
     print("TIME:", time, "CHANNEL:", group_channel)
     return time, group_channel
                 
-def form_reminder(group_channel):
+def form_group_reminder(group_channel):
     # TODO some methods from DBController to get info from database
     # group_info = get_group_info(group_channel)
     # group_members_channels = group_info.get("members_channels")
     # time = group_info.get("time")
     
+    print("FORM REMINDER")
     # сейчас хардкод =================
     group_members_channels = ["DL9QABUBT"]
     reminder_message = "There's one hour left until the end of the StandUp."
-    time = "16:40"
+    time = "16:20"
+    #time=2
     day = 1
     # ================================
 
     if group_members_channels:
         for member_channel in group_members_channels:
-            send_reminder_message(time=time, 
-                                  day=day, 
-                                  channel=member_channel, 
-                                  text=reminder_message)
-            # slack_client.api_call("chat.scheduleMessage",
-            #                         channel=member,
-            #                         post_at=
-            #                         text=
-            #                         )
-
-def send_reminder_message(time, day, channel, text):
-    # TODO change parser
-    if day == 1:
-        schedule.every().monday.at(time).do(slack_client.api_call("chat.postMessage",
-                                                                       channel=channel,
-                                                                       text=text))
-    elif day == 2:
-        schedule.every().tuesday.at(time).do(slack_client.api_call("chat.postMessage",
-                                                                       channel=channel,
-                                                                       text=text))
-    elif day == 3:
-        schedule.every().wednesday.at(time).do(slack_client.api_call("chat.postMessage",
-                                                                       channel=channel,
-                                                                       text=text))
-    elif day == 4:
-        schedule.every().thursday.at(time).do(slack_client.api_call("chat.postMessage",
-                                                                       channel=channel,
-                                                                       text=text))
-    elif day == 5:
-        schedule.every().friday.at(time).do(slack_client.api_call("chat.postMessage",
-                                                                       channel=channel,
-                                                                       text=text))
-    elif day == 6:
-        schedule.every().saturday.at(time).do(slack_client.api_call("chat.postMessage",
-                                                                       channel=channel,
-                                                                       text=text))
-    elif day == 7:
-        schedule.every().sunday.at(time).do(slack_client.api_call("chat.postMessage",
-                                                                       channel=channel,
-                                                                       text=text))
+            print("ADD SCHEDULE JOB")
+            add_scheduled_job(time, day, slack_client.api_call, 
+                                            "chat.postMessage", 
+                                            member_channel, 
+                                            reminder_message)
  
 # parse day number and start scheduler with job
-def day_manager(time, day, job):
-    pass
+# could be used for different tasks
+def add_scheduled_job(time, day, job, method, channel, text, attachments=[]):
+    # TODO change parser
+    if day == 1:
+        print("MONDAY JOB")
+        schedule.every().monday.at(time).do(job, method=method, channel=channel, text=text, attachments=attachments)
+        #schedule.every(2).seconds.do(job, method=method, channel=channel, text=text, attachments=attachments)
+    elif day == 2:
+        schedule.every().tuesday.at(time).do(job, method=method, channel=channel, text=text, attachments=attachments)
+    elif day == 3:
+        schedule.every().wednesday.at(time).do(job, method=method, channel=channel, text=text, attachments=attachments)
+    elif day == 4:
+        schedule.every().thursday.at(time).do(job, method=method, channel=channel, text=text, attachments=attachments)
+    elif day == 5:
+        schedule.every().friday.at(time).do(job, method=method, channel=channel, text=text, attachments=attachments)
+    elif day == 6:
+        schedule.every().saturday.at(time).do(job, method=method, channel=channel, text=text, attachments=attachments)
+    elif day == 7:
+        schedule.every().sunday.at(time).do(job, method=method, channel=channel, text=text, attachments=attachments)
+    else:
+        print("UNEXPECTED DAY VALUE")
+        pass
 
 def _command_handler(channel, user, message):
     global works_report_controller
@@ -210,7 +198,7 @@ def _command_handler(channel, user, message):
         print(commands[2], message)
         print('SCHEDULE TEST')
 
-        form_reminder(None)
+        form_group_reminder(None)
         return True
 
     else:
