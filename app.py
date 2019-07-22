@@ -17,6 +17,8 @@ app = Flask(__name__)
 # Your app's Slack bot user token
 SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN")
 SIGNING_SECRET = os.environ.get("SIGNING_SECRET")
+# hotfix variable to catch bot mentioning
+BOT_MENTIONED = os.environ.get("BOT_MENTIONED")
 # Slack client for Web API requests
 slack_client = SlackClient(SLACK_BOT_TOKEN)
 # Slack event adapter API to process events
@@ -24,9 +26,6 @@ slack_events_adapter = SlackEventAdapter(SIGNING_SECRET, "/slack/events", app)
 
 # List of commands for bot
 commands = ['/q', '/init']
-
-# TODO избавиться от хардкода
-_bot_mentioning = "<@ULJ0QF87R>"
 
 global inviter_list
 global days_list
@@ -275,7 +274,7 @@ def message(event):
 
             # bot mentioning implies command
             # ============= USER MENTIONED BOT IN DIRECT MESSAGE TO BOT ============= #
-            if '<@ULJ0QF87R>' in message:
+            if str(BOT_MENTIONED) in message:
                 print("BOT WAS MENTIONED IN DIRECT MESSAGE FROM USER", "\n")
                 _command_handler(channel, user, message)
             # ============= SIMPLE DIRECT MESSAGE FROM USER ============= #
