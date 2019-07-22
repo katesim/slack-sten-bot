@@ -4,6 +4,7 @@ import json
 import os
 from slackclient import SlackClient
 from slackeventsapi import SlackEventAdapter
+import schedule
 import time
 from pprint import pprint
 
@@ -25,7 +26,7 @@ slack_client = SlackClient(SLACK_BOT_TOKEN)
 slack_events_adapter = SlackEventAdapter(SIGNING_SECRET, "/slack/events", app)
 
 # List of commands for bot
-commands = ['/q', '/init']
+commands = ['/q', '/init', '/schedule']
 
 global inviter_list
 global days_list
@@ -105,18 +106,77 @@ def message_actions():
     elif form_json["type"] == "dialog_submission":
         print("FORM response_url", form_json['response_url'])
         submission = form_json.get("submission")
-        time, channel_to_attach = get_menu_answers(submission)
+        time, group_channel = get_menu_answers(submission)
         return make_response("", 200)
     
 def get_menu_answers(submission):
     time = None
-    channel_to_attach = None
+    group_channel = None
     if submission:
         time = submission.get("meal_preferences")
-        channel_to_attach = submission.get("channel_notify")
-    print("TIME:", time, "CHANNEL:", channel_to_attach)
-    return time, channel_to_attach
+        group_channel = submission.get("channel_notify")
+    print("TIME:", time, "CHANNEL:", group_channel)
+    return time, group_channel
+                
+def form_reminder(group_channel):
+    # TODO some methods from DBController to get info from database
+    # group_info = get_group_info(group_channel)
+    # group_members_channels = group_info.get("members_channels")
+    # time = group_info.get("time")
+    
+    # сейчас хардкод =================
+    group_members_channels = ["DL9QABUBT"]
+    reminder_message = "There's one hour left until the end of the StandUp."
+    time = "16:40"
+    day = 1
+    # ================================
 
+    if group_members_channels:
+        for member_channel in group_members_channels:
+            send_reminder_message(time=time, 
+                                  day=day, 
+                                  channel=member_channel, 
+                                  text=reminder_message)
+            # slack_client.api_call("chat.scheduleMessage",
+            #                         channel=member,
+            #                         post_at=
+            #                         text=
+            #                         )
+
+def send_reminder_message(time, day, channel, text):
+    # TODO change parser
+    if day == 1:
+        schedule.every().monday.at(time).do(slack_client.api_call("chat.postMessage",
+                                                                       channel=channel,
+                                                                       text=text))
+    elif day == 2:
+        schedule.every().tuesday.at(time).do(slack_client.api_call("chat.postMessage",
+                                                                       channel=channel,
+                                                                       text=text))
+    elif day == 3:
+        schedule.every().wednesday.at(time).do(slack_client.api_call("chat.postMessage",
+                                                                       channel=channel,
+                                                                       text=text))
+    elif day == 4:
+        schedule.every().thursday.at(time).do(slack_client.api_call("chat.postMessage",
+                                                                       channel=channel,
+                                                                       text=text))
+    elif day == 5:
+        schedule.every().friday.at(time).do(slack_client.api_call("chat.postMessage",
+                                                                       channel=channel,
+                                                                       text=text))
+    elif day == 6:
+        schedule.every().saturday.at(time).do(slack_client.api_call("chat.postMessage",
+                                                                       channel=channel,
+                                                                       text=text))
+    elif day == 7:
+        schedule.every().sunday.at(time).do(slack_client.api_call("chat.postMessage",
+                                                                       channel=channel,
+                                                                       text=text))
+ 
+# parse day number and start scheduler with job
+def day_manager(time, day, job):
+    pass
 
 def _command_handler(channel, user, message):
     global works_report_controller
@@ -144,6 +204,13 @@ def _command_handler(channel, user, message):
                               text="Init new standUP",
                               attachments=init_controller.init_menu(channel=channel))
         print('OPEN')
+        return True
+
+    if commands[2] in message:
+        print(commands[2], message)
+        print('SCHEDULE TEST')
+
+        form_reminder(None)
         return True
 
     else:
@@ -272,7 +339,7 @@ def message(event):
         channel = message_event["channel"]
         # im means direct messages
         # ============= DIRECT MESSAGE FROM USER ============= #
-        if channel_type=="im":#channel[0] == "D":
+        if channel_type == "im":
 
             user = message_event.get("user")
             message = message_event.get("text")
