@@ -208,13 +208,11 @@ def _message_handler(message_event):
     #return make_response(message, 200, {"X-Slack-No-Retry": 1})
 
 def get_real_user_name(user_id):
-    users_list = slack_client.api_call("users.list")
+    user_info = slack_client.api_call("users.info", user=user_id)
     real_user_name = "user"
-    for member in users_list['members']:
-        if member.get("id") == user_id:
-            real_user_name = member.get("profile").get("display_name")
-            user_id = member.get('id')
-            print('real_name :', real_user_name, 'user_id :', user_id)
+    if user_info.get("ok"):
+        real_user_name = user_info.get("user").get("real_name")
+        print('REAL NAME :', real_user_name, 'USER ID :', user_id)
     return real_user_name
 
 def _take_answer(slack_event):
@@ -262,20 +260,22 @@ def app_mention(event):
 def message(event):
     print("MESSAGE")
     message_event = event["event"]
+    channel_type = message_event.get("channel_type")
     subtype = message_event.get("subtype")
 
     pprint(event)
     print("\n")
     # ============= MESSAGE FROM USER ============= #
-    if subtype != "bot_message":
+
+    if subtype == None:#!= "bot_message":
 
         channel = message_event["channel"]
-        # D means direct messages
+        # im means direct messages
         # ============= DIRECT MESSAGE FROM USER ============= #
-        if channel[0] == "D":
+        if channel_type=="im":#channel[0] == "D":
 
-            user = message_event["user"]
-            message = message_event["text"]
+            user = message_event.get("user")
+            message = message_event.get("text")
 
             # bot mentioning implies command
             # ============= USER MENTIONED BOT IN DIRECT MESSAGE TO BOT ============= #
