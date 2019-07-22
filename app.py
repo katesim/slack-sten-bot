@@ -17,6 +17,8 @@ app = Flask(__name__)
 # Your app's Slack bot user token
 SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN")
 SIGNING_SECRET = os.environ.get("SIGNING_SECRET")
+# hotfix variable to catch bot mentioning
+BOT_MENTIONED = os.environ.get("BOT_MENTIONED")
 # Slack client for Web API requests
 slack_client = SlackClient(SLACK_BOT_TOKEN)
 # Slack event adapter API to process events
@@ -24,9 +26,6 @@ slack_events_adapter = SlackEventAdapter(SIGNING_SECRET, "/slack/events", app)
 
 # List of commands for bot
 commands = ['/q', '/init']
-
-# TODO избавиться от хардкода
-_bot_mentioning = "<@ULJ0QF87R>"
 
 global inviter_list
 global days_list
@@ -105,7 +104,18 @@ def message_actions():
 
     elif form_json["type"] == "dialog_submission":
         print("FORM response_url", form_json['response_url'])
+        submission = form_json.get("submission")
+        time, channel_to_attach = get_menu_answers(submission)
         return make_response("", 200)
+    
+def get_menu_answers(submission):
+    time = None
+    channel_to_attach = None
+    if submission:
+        time = submission.get("meal_preferences")
+        channel_to_attach = submission.get("channel_notify")
+    print("TIME:", time, "CHANNEL:", channel_to_attach)
+    return time, channel_to_attach
 
 
 def _command_handler(channel, user, message):
@@ -158,23 +168,15 @@ def _message_handler(message_event):
             print('USER SELECTED SHORT ANSWER: ', message)
 
     if user:
-        users_list = requests.get("https://slack.com/api/users.list?token=" + SLACK_BOT_TOKEN).json()
-        print('STEP1')
-        for member in users_list['members']:
-            print('STEP2', member)
-            if member.get("id") == user:
-                print()
-                real_name_user = member.get("profile").get("display_name")
-                user_id = member.get('id')
-                print('real_name :', real_name_user, 'user_id :', user_id)
-
+        real_user_name = get_real_user_name(user)
+        
         # предыдущее вопрос?
         current_message, previous_message = _take_answer(message_event)
         print('current_message, previous_message', current_message, previous_message)
         if previous_message in WorksReportController().questions:
             attachments = works_report_controller.remember_answer(answer=current_message,
                                                                   question=previous_message,
-                                                                  real_name_user=real_name_user)
+                                                                  real_user_name=real_user_name)
             slack_client.api_call("chat.postMessage",
                                   channel=channel,
                                   text=attachments[0],
@@ -203,20 +205,33 @@ def _message_handler(message_event):
     # If the event_type does not have a handler
     # message = "You have not added an event handler for the %s" % event_type
     # Return a helpful error message
-    return make_response(message, 200, {"X-Slack-No-Retry": 1})
+    #return make_response(message, 200, {"X-Slack-No-Retry": 1})
 
+def get_real_user_name(user_id):
+    users_list = slack_client.api_call("users.list")
+    real_user_name = "user"
+    for member in users_list['members']:
+        if member.get("id") == user_id:
+            real_user_name = member.get("profile").get("display_name")
+            user_id = member.get('id')
+            print('real_name :', real_user_name, 'user_id :', user_id)
+    return real_user_name
 
 def _take_answer(slack_event):
-    conversations_history = requests.get(
-        "https://slack.com/api/conversations.history?token=" + SLACK_BOT_TOKEN
-        + "&channel=" + slack_event["channel"]
-        + "&latest=" + str(time.time())
-        + "&limit=2&inclusive=true").json()
-
-    answer = conversations_history['messages'][0]['text']
-    question = conversations_history['messages'][1]['text']
-    print('Вопрос: ', question)
-    print('Ответ: ', answer)
+    channel = slack_event["channel"]
+    answer = None
+    question = None
+    conversations_history = slack_client.api_call("conversations.history",
+                                                    channel=channel,
+                                                    latest=str(time.time()),
+                                                    limit=2,
+                                                    inclusive=True)
+    
+    if conversations_history.get("ok"):
+        answer = conversations_history['messages'][0]['text']
+        question = conversations_history['messages'][1]['text']
+        print('Вопрос: ', question)
+        print('Ответ: ', answer)
     return answer, question
 
 
@@ -226,7 +241,7 @@ def _first_message(channel):
                                  text=str('Hello! :hand: '
                                           '\nAvailable commands:'
                                           '\n *' + commands[0] + '* - _send questions_'
-                                                                 '\n *' + commands[1] + '* - _init new task_'))
+                                          '\n *' + commands[1] + '* - _init new task_'))
 
 
 # bot mentioning in channel
@@ -252,7 +267,7 @@ def message(event):
     pprint(event)
     print("\n")
     # ============= MESSAGE FROM USER ============= #
-    if subtype is None:
+    if subtype != "bot_message":
 
         channel = message_event["channel"]
         # D means direct messages
@@ -264,7 +279,7 @@ def message(event):
 
             # bot mentioning implies command
             # ============= USER MENTIONED BOT IN DIRECT MESSAGE TO BOT ============= #
-            if '/q' in message:
+            if str(BOT_MENTIONED) in message:
                 print("BOT WAS MENTIONED IN DIRECT MESSAGE FROM USER", "\n")
                 _command_handler(channel, user, message)
             # ============= SIMPLE DIRECT MESSAGE FROM USER ============= #
