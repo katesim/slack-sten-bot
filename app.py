@@ -208,7 +208,8 @@ def _message_handler(message_event):
     #return make_response(message, 200, {"X-Slack-No-Retry": 1})
 
 def get_real_user_name(user_id):
-    users_list = requests.get("https://slack.com/api/users.list?token=" + SLACK_BOT_TOKEN).json()
+    users_list = slack_client.api_call("users.list")
+    real_user_name = "user"
     for member in users_list['members']:
         if member.get("id") == user_id:
             real_user_name = member.get("profile").get("display_name")
@@ -217,16 +218,20 @@ def get_real_user_name(user_id):
     return real_user_name
 
 def _take_answer(slack_event):
-    conversations_history = requests.get(
-        "https://slack.com/api/conversations.history?token=" + SLACK_BOT_TOKEN
-        + "&channel=" + slack_event["channel"]
-        + "&latest=" + str(time.time())
-        + "&limit=2&inclusive=true").json()
-
-    answer = conversations_history['messages'][0]['text']
-    question = conversations_history['messages'][1]['text']
-    print('Вопрос: ', question)
-    print('Ответ: ', answer)
+    channel = slack_event["channel"]
+    answer = None
+    question = None
+    conversations_history = slack_client.api_call("conversations.history",
+                                                    channel=channel,
+                                                    latest=str(time.time()),
+                                                    limit=2,
+                                                    inclusive=True)
+    
+    if conversations_history.get("ok"):
+        answer = conversations_history['messages'][0]['text']
+        question = conversations_history['messages'][1]['text']
+        print('Вопрос: ', question)
+        print('Ответ: ', answer)
     return answer, question
 
 
