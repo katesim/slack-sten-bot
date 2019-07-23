@@ -7,6 +7,12 @@ class ScheduleController:
         self.slack_client = slack_client
         self.works_report_controller = works_report_controller
 
+    # activate schedule events for all StandUp activity for work group
+    def schedule_StandUp(self, group_channel):
+        self.schedule_group_questionnaire(group_channel)
+        self.schedule_group_reminder(group_channel)
+        self.schedule_group_report(group_channel)
+
     def schedule_group_reminder(self, group_channel):
         # TODO some methods from DBController to get info from database
         # group_info = get_group_info(group_channel)
@@ -16,16 +22,14 @@ class ScheduleController:
         print("FORM REMINDER")
 
         # сейчас хардкод =================
-        group_members_channels = ["DL9QABUBT"]
+        members_channels = ["DL9QABUBT"]
         time = "16:20"
         #time=2
         weekday = 1
         # ================================
 
-        if group_members_channels:
-            for member_channel in group_members_channels:
-                print("ADD SCHEDULE JOB")
-                self.add_scheduled_job(time, weekday, self.send_reminder_message, member_channel)
+        print("ADD SCHEDULE JOB")
+        self.add_scheduled_job(time, weekday, self.send_reminder_messages, members_channels)
 
     def schedule_group_report(self, group_channel):
         print("FORM REPORT")
@@ -66,7 +70,8 @@ class ScheduleController:
 
     def send_report_message(self, group_channel):
         # get reports from data base
-        # form attachment
+        # TODO check if report empty or not
+        # if empty send no answer
 
         # ============= хардкод проверка что текст берется в момент отправки =====
         conversations_history = self.slack_client.api_call("conversations.history",
@@ -82,13 +87,15 @@ class ScheduleController:
 
         # ============= хардкод проверка что текст берется в момент отправки =====
         
-        return self.slack_client.api_call("chat.postMessage", 
-                                            channel=group_channel, 
-                                            text=report_message)
+        self.slack_client.api_call("chat.postMessage", 
+                                        channel=group_channel, 
+                                        text=report_message)
 
-    def send_reminder_message(self, member_channel):
+    def send_reminder_messages(self, members_channels):
         reminder_message = "There's one hour left until the end of the StandUp."
-        return self.slack_client.api_call("chat.postMessage", 
+        
+        for member_channel in members_channels:
+            self.slack_client.api_call("chat.postMessage", 
                                             channel=member_channel, 
                                             text=reminder_message)
 
