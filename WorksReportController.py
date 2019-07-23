@@ -66,6 +66,10 @@ class WorksReportController:
         self.question_counter += 1
         self.ts_report = None
 
+        if answer in [short_answer[1] for short_answer in self.short_answers]:
+            self.question_counter = 0
+            return self.create_report(real_user_name)
+
         try:
             return self.answer_menu(question=self.questions[self.question_counter])
         except:
