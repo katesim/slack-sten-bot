@@ -89,9 +89,8 @@ def message_actions():
                 attachments=[]  # empty `attachments` to clear the existing massage attachments
             )
 
-            im_channel = slack_client.api_call("im.open", user=user)['channel'].get('id')
             slack_client.api_call("chat.postMessage",
-                                  channel=im_channel,  # TODO отпарвлять в тред РГ
+                                  channel=work_group.channel,  # TODO отправлять в тред РГ
                                   text=attachments[0],
                                   attachments=attachments[1])
 
@@ -212,9 +211,8 @@ def _message_handler(message_event):
             work_group.update_reports(report=works_report_controller.report.serialize(),
                                       ts_reports=works_report_controller.ts_report)
 
-            im_channel = slack_client.api_call("im.open", user=user)['channel'].get('id')
             slack_client.api_call("chat.postMessage",
-                                  channel=im_channel,  # TODO отпарвлять в тред РГ
+                                  channel=work_group.channel,  # TODO отправлять в тред РГ
                                   text=attachments[0],
                                   attachments=attachments[1])
         # TODO продумать нормальный init бота
