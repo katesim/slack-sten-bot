@@ -70,7 +70,7 @@ def message_actions():
             # Check to see what the user's selection was and update the message accordingly
             selection = form_json["actions"][0]["selected_options"][0]["value"]
             short_answer = works_report_controller.take_short_answer(selection)
-            works_report_controller.remember_answer(
+            attachments = works_report_controller.remember_answer(
                 question=works_report_controller.questions[works_report_controller.question_counter],
                 answer=short_answer,
                 user_id=user,
@@ -78,17 +78,22 @@ def message_actions():
                 ts_answer=time.time())
 
             work_group = WorkGroup(DBController.get_group(0))
-            work_group.update_reports(channel=channel,
-                                      report=works_report_controller.report.serialize(),
+            work_group.update_reports(report=works_report_controller.report.serialize(),
                                       ts_reports=works_report_controller.ts_report)
 
             slack_client.api_call(
                 "chat.update",
-                channel=form_json["channel"]["id"],
+                channel=channel,
                 ts=form_json["message_ts"],
                 text="Your answer is {}  :coffee:".format(short_answer),
                 attachments=[]  # empty `attachments` to clear the existing massage attachments
             )
+
+            im_channel = slack_client.api_call("im.open", user=user)['channel'].get('id')
+            slack_client.api_call("chat.postMessage",
+                                  channel=im_channel,  # TODO отпарвлять в тред РГ
+                                  text=attachments[0],
+                                  attachments=attachments[1])
 
             # Send an HTTP 200 response with empty body so Slack knows we're done here
             return make_response("", 200)
@@ -141,8 +146,10 @@ def _command_handler(channel, user, message):
 
         # works_report_controller = WorksReportController()
         attachments = works_report_controller.answer_menu(works_report_controller.questions[0])
+
+        im_channel = slack_client.api_call("im.open", user=user)['channel'].get('id')
         slack_client.api_call("chat.postMessage",
-                              channel=channel,
+                              channel=im_channel,
                               text=attachments[0],
                               attachments=attachments[1])
         return True
@@ -153,7 +160,7 @@ def _command_handler(channel, user, message):
         # TODO заполнить из странички-админки
         DBController.add_group(WorkGroup(dict(
             channel='DHCLCG8DQ',
-            users=['UHTUFSFN2'],
+            users=['UHTJL2NKZ'],
             direct_id=['DHCLCG8DQ'],
             times='7:30')).serialize())
 
@@ -203,12 +210,12 @@ def _message_handler(message_event):
                                                                   real_user_name=real_user_name,
                                                                   ts_answer=time.time())
             work_group = WorkGroup(DBController.get_group(0))
-            work_group.update_reports(channel=channel,
-                                      report=works_report_controller.report.serialize(),
+            work_group.update_reports(report=works_report_controller.report.serialize(),
                                       ts_reports=works_report_controller.ts_report)
 
+            im_channel = slack_client.api_call("im.open", user=user)['channel'].get('id')
             slack_client.api_call("chat.postMessage",
-                                  channel=channel,
+                                  channel=im_channel,  # TODO отпарвлять в тред РГ
                                   text=attachments[0],
                                   attachments=attachments[1])
         # TODO продумать нормальный init бота
