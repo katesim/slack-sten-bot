@@ -18,7 +18,7 @@ class WorkGroup(object):
                     reports=self.reports,
                     ts_reports=self.ts_reports)
 
-    def update_reports(self, channel, report, ts_reports):
+    def update_reports(self, report, ts_reports):
         if not self.reports:
             self.reports.append(report)
         self.ts_reports = ts_reports
@@ -28,7 +28,7 @@ class WorkGroup(object):
                 obj['answers'] = report['answers']
             else:
                 self.reports.append(report)
-        DBController.update_reports(channel, self.reports, self.ts_reports)
+        DBController.update_reports(self.channel, self.reports, self.ts_reports)
 
     def set_direct_id(self, direct_id):
         self.direct_id = direct_id
