@@ -1,4 +1,5 @@
 import schedule
+import time
 
 
 class ScheduleController:
@@ -12,21 +13,61 @@ class ScheduleController:
         # time = group_info.get("time")
         
         print("FORM REMINDER")
+
         # сейчас хардкод =================
         group_members_channels = ["DL9QABUBT"]
-        reminder_message = "There's one hour left until the end of the StandUp."
         time = "16:20"
         #time=2
-        day = 1
+        weekday = 1
         # ================================
 
         if group_members_channels:
             for member_channel in group_members_channels:
                 print("ADD SCHEDULE JOB")
-                self.add_scheduled_job(time, day, self.slack_client.api_call, 
-                                                "chat.postMessage", 
-                                                member_channel, 
-                                                reminder_message)
+                self.add_scheduled_job(time, weekday, self.send_reminder_message, member_channel)
+
+    def schedule_group_report(self, group_channel):
+        print("FORM REPORT")
+        # get time and weekday from db
+
+        # ====================хардкод====
+        weekday = 2
+        time = "12:00"
+        group_channel = "CL67NCJ0J"
+        # ====================хардкод====
+
+        self.add_scheduled_job(time, weekday, self.send_report_message, group_channel)
+        
+
+    def send_report_message(self, group_channel):
+        # get reports from data base
+        # form attachment
+
+        # ============= хардкод проверка что текст берется в момент отправки =====
+        conversations_history = self.slack_client.api_call("conversations.history",
+                                                    channel="DL9QABUBT",
+                                                    latest=str(time.time()),
+                                                    limit=2,
+                                                    inclusive=True)
+    
+        report_message = "report message"
+        if conversations_history.get("ok"):
+            report_message = conversations_history['messages'][1]['text']
+            print('REPORT MESSAGE:', report_message)
+
+        # ============= хардкод проверка что текст берется в момент отправки =====
+        
+        return self.slack_client.api_call("chat.postMessage", 
+                                            channel=group_channel, 
+                                            text=report_message)
+
+    def send_reminder_message(self, member_channel):
+        reminder_message = "There's one hour left until the end of the StandUp."
+        return self.slack_client.api_call("chat.postMessage", 
+                                            channel=member_channel, 
+                                            text=reminder_message)
+
+
 
     def stop_all(self):
         schedule.clear()
@@ -61,23 +102,25 @@ class ScheduleController:
 
     # parse day number and start scheduler with job
     # could be used for different tasks
-    def add_scheduled_job(self, time, day, job, method, channel, text, attachments=[]):
+    def add_scheduled_job(self, time, day, job, *args):#method, channel, text="text", attachments=[]):
         assert 0 < day < 8, "invalid day value"
         
         # TODO change parser
         if day == 1:
             print("MONDAY JOB")
             #schedule.every().monday.at(time).do(job, method=method, channel=channel, text=text, attachments=attachments)
-            schedule.every(10).seconds.do(job, method=method, channel=channel, text=text, attachments=attachments)
+            schedule.every(5).seconds.do(job, *args)#method=method, channel=channel, text=text, attachments=attachments)
         elif day == 2:
-            schedule.every().tuesday.at(time).do(job, method=method, channel=channel, text=text, attachments=attachments)
+            print("TUESDAY JOB")
+            #schedule.every().tuesday.at(time).do(job,*args) 
+            schedule.every(5).seconds.do(job, *args)
         elif day == 3:
-            schedule.every().wednesday.at(time).do(job, method=method, channel=channel, text=text, attachments=attachments)
+            schedule.every().wednesday.at(time).do(job, *args)
         elif day == 4:
-            schedule.every().thursday.at(time).do(job, method=method, channel=channel, text=text, attachments=attachments)
+            schedule.every().thursday.at(time).do(job, *args)
         elif day == 5:
-            schedule.every().friday.at(time).do(job, method=method, channel=channel, text=text, attachments=attachments)
+            schedule.every().friday.at(time).do(job, *args)
         elif day == 6:
-            schedule.every().saturday.at(time).do(job, method=method, channel=channel, text=text, attachments=attachments)
+            schedule.every().saturday.at(time).do(job, *args)
         else:
-            schedule.every().sunday.at(time).do(job, method=method, channel=channel, text=text, attachments=attachments)
+            schedule.every().sunday.at(time).do(job, *args)
