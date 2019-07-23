@@ -56,19 +56,29 @@ def message_options():
 # The endpoint Slack will send the user's menu selection to
 @app.route("/slack/message_actions", methods=["POST"])
 def message_actions():
-    # Parse the request payload
+    global time
     form_json = json.loads(request.form["payload"])
     print('\n\n\nPAYLOAD:\n', form_json["type"], '\n\n\n\n')
     pprint(form_json)
 
     channel = form_json["channel"]["id"]
+    user = form_json["user"]["id"]
+
     if form_json["type"] == "interactive_message":
         if form_json['actions'][0]['name'] == str("short_answer_list"):
             # Check to see what the user's selection was and update the message accordingly
             selection = form_json["actions"][0]["selected_options"][0]["value"]
             short_answer = works_report_controller.take_short_answer(selection)
+            works_report_controller.remember_answer(question=works_report_controller.questions[works_report_controller.question_counter],
+                                                    answer=short_answer,
+                                                    user_id=user,
+                                                    real_user_name=get_real_user_name(user),
+                                                    ts_answer= time.time())
+            works_group.update_reports(channel=channel,
+                                       report=works_report_controller.report.serialize(),
+                                       ts_reports=works_report_controller.ts_report)
 
-            response = slack_client.api_call(
+            slack_client.api_call(
                 "chat.update",
                 channel=form_json["channel"]["id"],
                 ts=form_json["message_ts"],
