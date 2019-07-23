@@ -19,7 +19,7 @@ class WorkGroup(object):
                     ts_reports=self.ts_reports)
 
     def update_reports(self, channel, report, ts_reports):
-        if self.reports:
+        if not self.reports:
             self.reports.append(report)
         self.ts_reports = ts_reports
 
