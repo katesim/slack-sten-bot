@@ -10,6 +10,7 @@ from pprint import pprint
 
 from WorksReportController import WorksReportController
 from InitController import InitController
+from ScheduleController import ScheduleController
 
 init_controller = InitController()
 
@@ -27,15 +28,17 @@ slack_events_adapter = SlackEventAdapter(SIGNING_SECRET, "/slack/events", app)
 schedule.run_continuously()
 
 # List of commands for bot
-commands = ['/q', '/init', '/schedule']
+commands = ['/q', '/init', '/schedule', '/stop']
 
 global inviter_list
 global days_list
 global works_report_controller
+global schedule_controller
 
 days_list = []
 inviter_list = []
 works_report_controller = WorksReportController()
+schedule_controller = ScheduleController(slack_client)
 
 
 @app.route('/', methods=['GET'])
@@ -118,56 +121,10 @@ def get_menu_answers(submission):
         group_channel = submission.get("channel_notify")
     print("TIME:", time, "CHANNEL:", group_channel)
     return time, group_channel
-                
-def form_group_reminder(group_channel):
-    # TODO some methods from DBController to get info from database
-    # group_info = get_group_info(group_channel)
-    # group_members_channels = group_info.get("members_channels")
-    # time = group_info.get("time")
-    
-    print("FORM REMINDER")
-    # сейчас хардкод =================
-    group_members_channels = ["DL9QABUBT"]
-    reminder_message = "There's one hour left until the end of the StandUp."
-    time = "16:20"
-    #time=2
-    day = 1
-    # ================================
-
-    if group_members_channels:
-        for member_channel in group_members_channels:
-            print("ADD SCHEDULE JOB")
-            add_scheduled_job(time, day, slack_client.api_call, 
-                                            "chat.postMessage", 
-                                            member_channel, 
-                                            reminder_message)
- 
-# parse day number and start scheduler with job
-# could be used for different tasks
-def add_scheduled_job(time, day, job, method, channel, text, attachments=[]):
-    # TODO change parser
-    if day == 1:
-        print("MONDAY JOB")
-        schedule.every().monday.at(time).do(job, method=method, channel=channel, text=text, attachments=attachments)
-        #schedule.every(2).seconds.do(job, method=method, channel=channel, text=text, attachments=attachments)
-    elif day == 2:
-        schedule.every().tuesday.at(time).do(job, method=method, channel=channel, text=text, attachments=attachments)
-    elif day == 3:
-        schedule.every().wednesday.at(time).do(job, method=method, channel=channel, text=text, attachments=attachments)
-    elif day == 4:
-        schedule.every().thursday.at(time).do(job, method=method, channel=channel, text=text, attachments=attachments)
-    elif day == 5:
-        schedule.every().friday.at(time).do(job, method=method, channel=channel, text=text, attachments=attachments)
-    elif day == 6:
-        schedule.every().saturday.at(time).do(job, method=method, channel=channel, text=text, attachments=attachments)
-    elif day == 7:
-        schedule.every().sunday.at(time).do(job, method=method, channel=channel, text=text, attachments=attachments)
-    else:
-        print("UNEXPECTED DAY VALUE")
-        pass
 
 def _command_handler(channel, user, message):
     global works_report_controller
+    global schedule_controller
 
     if commands[0] in message:
         print(commands[0], message)
@@ -196,9 +153,14 @@ def _command_handler(channel, user, message):
 
     if commands[2] in message:
         print(commands[2], message)
-        print('SCHEDULE TEST')
+        print('SCHEDULE START')
+        schedule_controller.schedule_group_reminder(None)
+        return True
 
-        form_group_reminder(None)
+    if commands[3] in message:
+        print(commands[3], message)
+        print('SCHEDULE STOP')
+        schedule_controller.stop_all()
         return True
 
     else:
