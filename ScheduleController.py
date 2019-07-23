@@ -31,7 +31,34 @@ class ScheduleController:
     def stop_all(self):
         schedule.clear()
 
-    
+    # calculate time for reminder message (1 hour earlier)
+    def minus_hours(self, time, weekday, hour_shift=1):
+        assert ":" in time, "time format should be hh:mm or h:mm"
+
+        hour, minute = [int(value) for value in time.split(":")]
+        new_hour = (hour - hour_shift)%24
+        if new_hour > hour:
+            weekday = (weekday - 1)%7
+        new_time = "{}:{}".format(new_hour, minute)
+        return new_time, weekday
+
+    # formatting time for schedule 
+    def format_time(self, time):
+        assert ":" in time, "time format should be hh:mm or h:mm"
+
+        hour, minute = time.split(":")
+        len_hour = len(hour)
+        len_minute = len(minute)
+        assert 3 > len_hour > 0, "invalid hour format"
+        assert 3 > len_minute > 0, "invalid minute format"
+        if len_hour < 2:
+            hour = "0{}".format(hour)
+        if len_minute < 2:
+            minute = "0{}".format(minute)
+        new_time = "{}:{}".format(hour, minute)
+        return new_time
+
+
     # parse day number and start scheduler with job
     # could be used for different tasks
     def add_scheduled_job(self, time, day, job, method, channel, text, attachments=[]):
