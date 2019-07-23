@@ -25,9 +25,9 @@ class DBController:
         return number['seq']
 
     @classmethod
-    def add_group(cls, group, uuid):
+    def add_group(cls, group):
         cls.groups.insert_one({**group,
-                               '_id': uuid,
+                               '_id': str(uuid.uuid4()),
                                'serial_id': 0}
                               )
 
@@ -64,5 +64,5 @@ class DBController:
 
 if __name__ == '__main__':
     DBController.first_setup()
-    DBController.add_group(group={}, uuid=str(uuid.uuid4()))
+    DBController.add_group(group={})
     pprint(DBController.get_group(0))
