@@ -9,6 +9,8 @@ from pprint import pprint
 
 from WorksReportController import WorksReportController
 from InitController import InitController
+from WorksGroup import WorksGroup
+from DBController import DBController
 
 init_controller = InitController()
 
@@ -78,27 +80,27 @@ def message_actions():
             return make_response("", 200)
 
         if form_json['actions'][0]['name'] == "init_standup":
-            open_dialog = slack_client.api_call(
-                "dialog.open",
-                trigger_id=form_json["trigger_id"],
-                dialog=init_controller.create_dialog(form_json["channel"]["id"])
-            )
-
-            print('\nopen_dialog: ', open_dialog)
-
-            # Update the message to show that we're in the process of taking their order
-            slack_client.api_call(
-                "chat.update",
-                channel=channel,
-                ts=form_json["message_ts"],
-                text=":pencil: Note your answers"
-            )
-
+            # open_dialog = slack_client.api_call(
+            #     "dialog.open",
+            #     trigger_id=form_json["trigger_id"],
+            #     dialog=init_controller.create_dialog(form_json["channel"]["id"])
+            # )
+            #
+            # print('\nopen_dialog: ', open_dialog)
+            #
+            # # Update the message to show that we're in the process of taking their order
+            # slack_client.api_call(
+            #     "chat.update",
+            #     channel=channel,
+            #     ts=form_json["message_ts"],
+            #     text=":pencil: Note your answers"
+            # )
+            #
             # send_message(_channel, 'Whom to invite?')
             slack_client.api_call(
                 "chat.postMessage",
                 channel=channel,
-                text="Whom to invite?"
+                text="add group to DB"
             )
             return make_response("", 200)
 
@@ -120,6 +122,7 @@ def get_menu_answers(submission):
 
 def _command_handler(channel, user, message):
     global works_report_controller
+    global works_group
 
     if commands[0] in message:
         print(commands[0], message)
@@ -138,11 +141,12 @@ def _command_handler(channel, user, message):
     if commands[1] in message:
         print(commands[1], message)
         print('INPUT')
+        works_group = WorksGroup()
 
         slack_client.api_call("chat.postMessage",
                               channel=channel,
                               text="Init new standUP",
-                              attachments=init_controller.init_menu(channel=channel))
+                              attachments=[])
         print('OPEN')
         return True
 
@@ -154,6 +158,7 @@ def _message_handler(message_event):
     global inviter_list
     global days_list
     global works_report_controller
+    global works_group
 
     subtype = message_event.get("subtype")
     channel = message_event.get("channel")
@@ -169,14 +174,19 @@ def _message_handler(message_event):
 
     if user:
         real_user_name = get_real_user_name(user)
-        
+
         # предыдущее вопрос?
         current_message, previous_message = _take_answer(message_event)
         print('current_message, previous_message', current_message, previous_message)
         if previous_message in WorksReportController().questions:
             attachments = works_report_controller.remember_answer(answer=current_message,
                                                                   question=previous_message,
+                                                                  user_id=user,
                                                                   real_user_name=real_user_name)
+            works_group.update_reports(channel=channel,
+                                       report=works_report_controller.report.serialize(),
+                                       ts_reports=works_report_controller.ts_report)
+
             slack_client.api_call("chat.postMessage",
                                   channel=channel,
                                   text=attachments[0],
