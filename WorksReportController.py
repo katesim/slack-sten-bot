@@ -58,7 +58,7 @@ class WorksReportController:
             menu_options['options'].append(dict(text=answer[1], value=answer[0]))
         return menu_options
 
-    def remember_answer(self, question, answer, user_id, real_user_name, ts_answer=None):
+    def remember_answer(self, question, answer, user_id, real_user_name, ts_answer):
         if self.question_counter == 0:
             self.report = Report(user_id=user_id)
 

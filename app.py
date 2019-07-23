@@ -200,7 +200,8 @@ def _message_handler(message_event):
             attachments = works_report_controller.remember_answer(answer=current_message,
                                                                   question=previous_message,
                                                                   user_id=user,
-                                                                  real_user_name=real_user_name)
+                                                                  real_user_name=real_user_name,
+                                                                  ts_answer=time.time())
             work_group = WorkGroup(DBController.get_group(0))
             work_group.update_reports(channel=channel,
                                       report=works_report_controller.report.serialize(),
