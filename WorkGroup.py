@@ -5,7 +5,6 @@ class WorkGroup(object):
     def __init__(self, obj: dict):
         self.channel = obj.get('channel', None)
         self.users = obj.get('users', None)
-        self.direct_id = obj.get('direct_id', None)
         self.times = obj.get('times', None)
         self.reports = obj.get('reports', [])
         self.ts_reports = obj.get('ts_reports', None)
@@ -13,7 +12,6 @@ class WorkGroup(object):
     def serialize(self):
         return dict(channel=self.channel,
                     users=self.users,
-                    direct_id=self.direct_id,
                     times=self.times,
                     reports=self.reports,
                     ts_reports=self.ts_reports)
@@ -29,7 +27,3 @@ class WorkGroup(object):
             else:
                 self.reports.append(report)
         DBController.update_reports(self.channel, self.reports, self.ts_reports)
-
-    def set_direct_id(self, direct_id):
-        self.direct_id = direct_id
-

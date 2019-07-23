@@ -161,7 +161,6 @@ def _command_handler(channel, user, message):
         DBController.add_group(WorkGroup(dict(
             channel='DHCLCG8DQ',
             users=['UHTJL2NKZ'],
-            direct_id=['DHCLCG8DQ'],
             times='7:30')).serialize())
 
         slack_client.api_call(
