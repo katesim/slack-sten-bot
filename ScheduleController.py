@@ -25,7 +25,7 @@ class ScheduleController:
         members_channels = ["DL9QABUBT"]
         time = "16:20"
         #time=2
-        weekday = 1
+        weekday = 0
         # ================================
 
         print("ADD SCHEDULE JOB")
@@ -36,7 +36,7 @@ class ScheduleController:
         # get time and weekday from db
 
         # ====================хардкод====
-        weekday = 2
+        weekday = 1
         time = "12:00"
         group_channel = "CL67NCJ0J"
         # ====================хардкод====
@@ -50,7 +50,7 @@ class ScheduleController:
         members_channels = ["DL9QABUBT"]
         time = "16:20"
         #time=2
-        weekday = 3
+        weekday = 2
         # ================================
 
         self.add_scheduled_job(time, weekday, self.send_question_messages, members_channels)
@@ -135,26 +135,26 @@ class ScheduleController:
     # parse day number and start scheduler with job
     # could be used for different tasks
     def add_scheduled_job(self, time, day, job, *args):#method, channel, text="text", attachments=[]):
-        assert 0 < day < 8, "invalid day value"
+        assert 0 <= day < 7, "invalid day value"
         
         # TODO change parser
-        if day == 1:
+        if day == 0:
             print("MONDAY JOB")
             #schedule.every().monday.at(time).do(job, method=method, channel=channel, text=text, attachments=attachments)
             schedule.every(5).seconds.do(job, *args)#method=method, channel=channel, text=text, attachments=attachments)
-        elif day == 2:
+        elif day == 1:
             print("TUESDAY JOB")
             #schedule.every().tuesday.at(time).do(job,*args) 
             schedule.every(5).seconds.do(job, *args)
-        elif day == 3:
+        elif day == 2:
             print("WENDSDAY JOB")
             #schedule.every().wednesday.at(time).do(job, *args)
             schedule.every(15).seconds.do(job, *args)
-        elif day == 4:
+        elif day == 3:
             schedule.every().thursday.at(time).do(job, *args)
-        elif day == 5:
+        elif day == 4:
             schedule.every().friday.at(time).do(job, *args)
-        elif day == 6:
+        elif day == 5:
             schedule.every().saturday.at(time).do(job, *args)
         else:
             schedule.every().sunday.at(time).do(job, *args)
