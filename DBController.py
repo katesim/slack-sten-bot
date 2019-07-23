@@ -46,6 +46,21 @@ class DBController:
         filter_fields = filter_fields if filter_fields else dict()
         cls.groups.remove(filter_fields)
 
+    @classmethod
+    def update_reports(cls, channel, reports, ts_reports):
+        cls.groups.update_one(
+            {
+            'channel': channel,
+            },
+            {'$set': {
+                'reports': reports,
+                'ts_reports': ts_reports
+            },
+            }
+        )
+        print('UPD REPORTS IN DB')
+
+
 
 if __name__ == '__main__':
     DBController.first_setup()
