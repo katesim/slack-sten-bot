@@ -5,14 +5,14 @@ from pprint import pprint
 
 class Report:
     def __init__(self, user_id: str):
-        self.id_user = user_id
+        self.user_id = user_id
         self.cells = []
 
     def add_answer(self, cell: namedtuple('Cell', 'question answer ts_answer')):
         self.cells.append(cell)
 
     def serialize(self):
-        return {'id_user': self.id_user,
+        return {'id_user': self.user_id,
                 'answers': self.cells}
 
     def __getitem__(self, index):

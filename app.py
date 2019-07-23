@@ -9,7 +9,7 @@ from pprint import pprint
 
 from WorksReportController import WorksReportController
 from InitController import InitController
-from WorksGroup import WorksGroup
+from WorkGroup import WorkGroup
 from DBController import DBController
 
 init_controller = InitController()
@@ -141,7 +141,7 @@ def _command_handler(channel, user, message):
     if commands[1] in message:
         print(commands[1], message)
         print('INPUT')
-        works_group = WorksGroup()
+        works_group = WorkGroup()
 
         slack_client.api_call("chat.postMessage",
                               channel=channel,
