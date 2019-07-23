@@ -6,6 +6,7 @@ from slackclient import SlackClient
 from slackeventsapi import SlackEventAdapter
 import time
 from pprint import pprint
+import uuid
 
 from WorksReportController import WorksReportController
 from InitController import InitController
@@ -69,14 +70,17 @@ def message_actions():
             # Check to see what the user's selection was and update the message accordingly
             selection = form_json["actions"][0]["selected_options"][0]["value"]
             short_answer = works_report_controller.take_short_answer(selection)
-            works_report_controller.remember_answer(question=works_report_controller.questions[works_report_controller.question_counter],
-                                                    answer=short_answer,
-                                                    user_id=user,
-                                                    real_user_name=get_real_user_name(user),
-                                                    ts_answer= time.time())
-            works_group.update_reports(channel=channel,
-                                       report=works_report_controller.report.serialize(),
-                                       ts_reports=works_report_controller.ts_report)
+            works_report_controller.remember_answer(
+                question=works_report_controller.questions[works_report_controller.question_counter],
+                answer=short_answer,
+                user_id=user,
+                real_user_name=get_real_user_name(user),
+                ts_answer=time.time())
+
+            work_group = WorkGroup(DBController.get_group(0))
+            work_group.update_reports(channel=channel,
+                                      report=works_report_controller.report.serialize(),
+                                      ts_reports=works_report_controller.ts_report)
 
             slack_client.api_call(
                 "chat.update",
@@ -107,11 +111,7 @@ def message_actions():
             # )
             #
             # send_message(_channel, 'Whom to invite?')
-            slack_client.api_call(
-                "chat.postMessage",
-                channel=channel,
-                text="add group to DB"
-            )
+
             return make_response("", 200)
 
     elif form_json["type"] == "dialog_submission":
@@ -132,7 +132,6 @@ def get_menu_answers(submission):
 
 def _command_handler(channel, user, message):
     global works_report_controller
-    global works_group
 
     if commands[0] in message:
         print(commands[0], message)
@@ -150,14 +149,24 @@ def _command_handler(channel, user, message):
 
     if commands[1] in message:
         print(commands[1], message)
-        print('INPUT')
-        works_group = WorkGroup()
+
+        # TODO заполнить из странички-админки
+        DBController.add_group(WorkGroup(dict(
+            channel='DHCLCG8DQ',
+            users=['UHTUFSFN2'],
+            direct_id=['DHCLCG8DQ'],
+            times='7:30')).serialize())
+
+        slack_client.api_call(
+            "chat.postMessage",
+            channel=channel,
+            text="Add group to database"
+        )
 
         slack_client.api_call("chat.postMessage",
                               channel=channel,
                               text="Init new standUP",
                               attachments=[])
-        print('OPEN')
         return True
 
     else:
@@ -168,7 +177,6 @@ def _message_handler(message_event):
     global inviter_list
     global days_list
     global works_report_controller
-    global works_group
 
     subtype = message_event.get("subtype")
     channel = message_event.get("channel")
@@ -193,9 +201,10 @@ def _message_handler(message_event):
                                                                   question=previous_message,
                                                                   user_id=user,
                                                                   real_user_name=real_user_name)
-            works_group.update_reports(channel=channel,
-                                       report=works_report_controller.report.serialize(),
-                                       ts_reports=works_report_controller.ts_report)
+            work_group = WorkGroup(DBController.get_group(0))
+            work_group.update_reports(channel=channel,
+                                      report=works_report_controller.report.serialize(),
+                                      ts_reports=works_report_controller.ts_report)
 
             slack_client.api_call("chat.postMessage",
                                   channel=channel,
