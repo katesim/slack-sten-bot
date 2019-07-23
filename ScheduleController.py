@@ -3,8 +3,9 @@ import time
 
 
 class ScheduleController:
-    def __init__(self, slack_client):
+    def __init__(self, slack_client, works_report_controller):
         self.slack_client = slack_client
+        self.works_report_controller = works_report_controller
 
     def schedule_group_reminder(self, group_channel):
         # TODO some methods from DBController to get info from database
@@ -37,6 +38,30 @@ class ScheduleController:
         # ====================хардкод====
 
         self.add_scheduled_job(time, weekday, self.send_report_message, group_channel)
+
+    def schedule_group_questionnaire(self, group_channel):
+        print("FORM QUESTIONNARE")
+
+         # сейчас хардкод =================
+        members_channels = ["DL9QABUBT"]
+        time = "16:20"
+        #time=2
+        weekday = 3
+        # ================================
+
+        self.add_scheduled_job(time, weekday, self.send_question_messages, members_channels)
+
+    def send_question_messages(self, members_channels):
+
+        attachments = self.works_report_controller.answer_menu(self.works_report_controller.questions[0])
+        for member_channel in members_channels:
+            print("SEND QUESTION MESSAGE FOR MEMBER", member_channel)
+                
+            # works_report_controller = WorksReportController()
+            self.slack_client.api_call("chat.postMessage",
+                                    channel=member_channel,
+                                    text=attachments[0],
+                                    attachments=attachments[1])
         
 
     def send_report_message(self, group_channel):
@@ -115,7 +140,9 @@ class ScheduleController:
             #schedule.every().tuesday.at(time).do(job,*args) 
             schedule.every(5).seconds.do(job, *args)
         elif day == 3:
-            schedule.every().wednesday.at(time).do(job, *args)
+            print("WENDSDAY JOB")
+            #schedule.every().wednesday.at(time).do(job, *args)
+            schedule.every(15).seconds.do(job, *args)
         elif day == 4:
             schedule.every().thursday.at(time).do(job, *args)
         elif day == 5:

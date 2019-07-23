@@ -28,7 +28,7 @@ slack_events_adapter = SlackEventAdapter(SIGNING_SECRET, "/slack/events", app)
 schedule.run_continuously()
 
 # List of commands for bot
-commands = ['/q', '/init', '/remind', '/stop', '/report']
+commands = ['/q', '/init', '/remind', '/stop', '/report', '/start']
 
 global inviter_list
 global days_list
@@ -38,7 +38,7 @@ global schedule_controller
 days_list = []
 inviter_list = []
 works_report_controller = WorksReportController()
-schedule_controller = ScheduleController(slack_client)
+schedule_controller = ScheduleController(slack_client, works_report_controller)
 
 
 @app.route('/', methods=['GET'])
@@ -167,6 +167,12 @@ def _command_handler(channel, user, message):
         print(commands[4], message)
         print('REPORT START')
         schedule_controller.schedule_group_report(None)
+        return True
+
+    if commands[5] in message:
+        print(commands[5], message)
+        print('QUESTIONS START')
+        schedule_controller.schedule_group_questionnaire(None)
         return True
 
     else:
