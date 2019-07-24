@@ -4,6 +4,7 @@ import json
 import os
 from slackclient import SlackClient
 from slackeventsapi import SlackEventAdapter
+import schedule
 import time
 from pprint import pprint
 import uuid
@@ -12,6 +13,7 @@ from WorksReportController import WorksReportController
 from InitController import InitController
 from WorkGroup import WorkGroup
 from DBController import DBController
+from ScheduleController import ScheduleController
 
 init_controller = InitController()
 
@@ -22,21 +24,24 @@ SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN")
 SIGNING_SECRET = os.environ.get("SIGNING_SECRET")
 # hotfix variable to catch bot mentioning
 BOT_MENTIONED = os.environ.get("BOT_MENTIONED")
+# hotfix TODO delete hardcode ids
+YOUR_DIRECT_CHANNEL = os.environ.get("YOUR_DIRECT_CHANNEL")
+YOUR_USER_ID = os.environ.get("YOUR_USER_ID")
+
 # Slack client for Web API requests
 slack_client = SlackClient(SLACK_BOT_TOKEN)
 # Slack event adapter API to process events
 slack_events_adapter = SlackEventAdapter(SIGNING_SECRET, "/slack/events", app)
+schedule.run_continuously()
 
 # List of commands for bot
-commands = ['/q', '/init']
+commands = ['/q', '/init', '/remind', '/stop', '/report', '/start']
 
-global inviter_list
-global days_list
 global works_report_controller
+global schedule_controller
 
-days_list = []
-inviter_list = []
 works_report_controller = WorksReportController()
+schedule_controller = ScheduleController(slack_client, works_report_controller)
 
 
 @app.route('/', methods=['GET'])
@@ -121,23 +126,24 @@ def message_actions():
     elif form_json["type"] == "dialog_submission":
         print("FORM response_url", form_json['response_url'])
         submission = form_json.get("submission")
-        time, channel_to_attach = get_menu_answers(submission)
+        time, group_channel = get_menu_answers(submission)
         return make_response("", 200)
     
 def get_menu_answers(submission):
     time = None
-    channel_to_attach = None
+    group_channel = None
     if submission:
         time = submission.get("meal_preferences")
-        channel_to_attach = submission.get("channel_notify")
-    print("TIME:", time, "CHANNEL:", channel_to_attach)
-    return time, channel_to_attach
-
+        group_channel = submission.get("channel_notify")
+    print("TIME:", time, "CHANNEL:", group_channel)
+    return time, group_channel
 
 def _command_handler(channel, user, message):
     global works_report_controller
+    global schedule_controller
 
-    if commands[0] in message:
+    message_words = message.split()
+    if commands[0] in message_words:
         print(commands[0], message)
         slack_client.api_call("chat.postMessage",
                               channel=channel,
@@ -153,13 +159,13 @@ def _command_handler(channel, user, message):
                               attachments=attachments[1])
         return True
 
-    if commands[1] in message:
+    if commands[1] in message_words:
         print(commands[1], message)
 
         # TODO заполнить из странички-админки
         DBController.add_group(WorkGroup(dict(
-            channel='DHCLCG8DQ',
-            users=['UHTJL2NKZ'],
+            channel=str(YOUR_DIRECT_CHANNEL),
+            users=[str(YOUR_USER_ID)],
             times='7:30')).serialize())
 
         slack_client.api_call(
@@ -174,13 +180,35 @@ def _command_handler(channel, user, message):
                               attachments=[])
         return True
 
+    if commands[2] in message_words:
+        print(commands[2], message)
+        print('SCHEDULE START')
+        schedule_controller.schedule_group_reminder(None)
+        return True
+
+    if commands[3] in message_words:
+        print(commands[3], message)
+        print('SCHEDULE STOP')
+        schedule_controller.stop_all()
+        return True
+
+    if commands[4] in message_words:
+        print(commands[4], message)
+        print('REPORT START')
+        schedule_controller.schedule_group_report(None)
+        return True
+
+    if commands[5] in message_words:
+        print(commands[5], message)
+        print('QUESTIONS START')
+        schedule_controller.schedule_group_questionnaire(None)
+        return True
+
     else:
         return False
 
 
 def _message_handler(message_event):
-    global inviter_list
-    global days_list
     global works_report_controller
 
     subtype = message_event.get("subtype")
@@ -215,24 +243,6 @@ def _message_handler(message_event):
                                   channel=work_group.channel,  # TODO отправлять в тред РГ
                                   text=attachments[0],
                                   attachments=attachments[1])
-        # TODO продумать нормальный init бота
-        elif previous_message == 'Whom to invite?':
-            inviter_list.append(current_message)
-            slack_client.api_call("chat.postMessage",
-                                  channel=channel,
-                                  text=str(inviter_list))
-            slack_client.api_call("chat.postMessage",
-                                  channel=channel,
-                                  text='Days?')
-
-        elif previous_message == 'Days?':
-            days_list.append(current_message)
-            slack_client.api_call("chat.postMessage",
-                                  channel=channel,
-                                  text='Init',
-                                  attachments=init_controller.create_report_init(inviter_list, days_list))
-            inviter_list = []
-            days_list = []
     return make_response("Message Sent", 200, )
 
     # ============= Event Type Not Found! ============= #
@@ -306,7 +316,7 @@ def message(event):
         channel = message_event["channel"]
         # im means direct messages
         # ============= DIRECT MESSAGE FROM USER ============= #
-        if channel_type=="im":#channel[0] == "D":
+        if channel_type == "im":
 
             user = message_event.get("user")
             message = message_event.get("text")
