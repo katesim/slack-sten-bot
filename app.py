@@ -126,7 +126,8 @@ def _command_handler(channel, user, message):
     global works_report_controller
     global schedule_controller
 
-    if commands[0] in message:
+    message_words = message.split()
+    if commands[0] in message_words:
         print(commands[0], message)
         slack_client.api_call("chat.postMessage",
                               channel=channel,
@@ -140,7 +141,7 @@ def _command_handler(channel, user, message):
                               attachments=attachments[1])
         return True
 
-    if commands[1] in message:
+    if commands[1] in message_words:
         print(commands[1], message)
         print('INPUT')
 
@@ -151,25 +152,25 @@ def _command_handler(channel, user, message):
         print('OPEN')
         return True
 
-    if commands[2] in message:
+    if commands[2] in message_words:
         print(commands[2], message)
         print('SCHEDULE START')
         schedule_controller.schedule_group_reminder(None)
         return True
 
-    if commands[3] in message:
+    if commands[3] in message_words:
         print(commands[3], message)
         print('SCHEDULE STOP')
         schedule_controller.stop_all()
         return True
 
-    if commands[4] in message:
+    if commands[4] in message_words:
         print(commands[4], message)
         print('REPORT START')
         schedule_controller.schedule_group_report(None)
         return True
 
-    if commands[5] in message:
+    if commands[5] in message_words:
         print(commands[5], message)
         print('QUESTIONS START')
         schedule_controller.schedule_group_questionnaire(None)
