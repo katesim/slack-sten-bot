@@ -1,6 +1,9 @@
 import schedule
 import time
+import os
 
+YOUR_DIRECT_CHANNEL = os.environ.get("YOUR_DIRECT_CHANNEL")
+YOUR_USER_ID = os.environ.get("YOUR_USER_ID")
 
 class ScheduleController:
     def __init__(self, slack_client, works_report_controller):
@@ -22,7 +25,7 @@ class ScheduleController:
         print("FORM REMINDER")
 
         # сейчас хардкод =================
-        members_channels = ["DL9QABUBT"]
+        members_channels = [str(YOUR_DIRECT_CHANNEL)]
         time = "16:20"
         #time=2
         weekday = 0
@@ -38,6 +41,7 @@ class ScheduleController:
         # ====================хардкод====
         weekday = 1
         time = "12:00"
+        # TODO take real group channel, now it is "test" channel
         group_channel = "CL67NCJ0J"
         # ====================хардкод====
 
@@ -47,7 +51,7 @@ class ScheduleController:
         print("FORM QUESTIONNARE")
 
          # сейчас хардкод =================
-        members_channels = ["DL9QABUBT"]
+        members_channels = [str(YOUR_DIRECT_CHANNEL)]
         time = "16:20"
         #time=2
         weekday = 2
@@ -75,7 +79,7 @@ class ScheduleController:
 
         # ============= хардкод проверка что текст берется в момент отправки =====
         conversations_history = self.slack_client.api_call("conversations.history",
-                                                    channel="DL9QABUBT",
+                                                    channel=str(YOUR_DIRECT_CHANNEL),
                                                     latest=str(time.time()),
                                                     limit=2,
                                                     inclusive=True)

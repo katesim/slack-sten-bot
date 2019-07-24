@@ -24,6 +24,10 @@ SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN")
 SIGNING_SECRET = os.environ.get("SIGNING_SECRET")
 # hotfix variable to catch bot mentioning
 BOT_MENTIONED = os.environ.get("BOT_MENTIONED")
+# hotfix TODO delete hardcode ids
+YOUR_DIRECT_CHANNEL = os.environ.get("YOUR_DIRECT_CHANNEL")
+YOUR_USER_ID = os.environ.get("YOUR_USER_ID")
+
 # Slack client for Web API requests
 slack_client = SlackClient(SLACK_BOT_TOKEN)
 # Slack event adapter API to process events
@@ -164,8 +168,8 @@ def _command_handler(channel, user, message):
 
         # TODO заполнить из странички-админки
         DBController.add_group(WorkGroup(dict(
-            channel='DHCLCG8DQ',
-            users=['UHTJL2NKZ'],
+            channel=str(YOUR_DIRECT_CHANNEL),
+            users=[str(YOUR_USER_ID)],
             times='7:30')).serialize())
 
         slack_client.api_call(
