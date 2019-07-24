@@ -60,9 +60,7 @@ class DBController:
         )
         print('UPD REPORTS IN DB')
 
-
-
 if __name__ == '__main__':
     DBController.first_setup()
     DBController.add_group(group={})
-    pprint(DBController.get_group({"serial_id":0})
+    pprint(DBController.get_group({"serial_id":0}))

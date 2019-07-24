@@ -36,7 +36,7 @@ slack_events_adapter = SlackEventAdapter(SIGNING_SECRET, "/slack/events", app)
 schedule.run_continuously()
 
 # List of commands for bot
-commands = ['/q', '/init', '/remind', '/stop', '/report', '/start']
+commands = ['/q', '/init', '/start', '/stop']
 
 global works_report_controller
 global schedule_controller
@@ -83,7 +83,7 @@ def message_actions():
                 real_user_name=get_real_user_name(user),
                 ts_answer=time.time())
 
-            work_group = WorkGroup(DBController.get_group({'serial_id':0})
+            work_group = WorkGroup(DBController.get_group({'serial_id':0}))
             work_group.update_reports(report=works_report_controller.report.serialize(),
                                       ts_reports=works_report_controller.ts_report)
 
@@ -151,6 +151,7 @@ def _command_handler(channel, user, message):
                               text="command q")
 
         # works_report_controller = WorksReportController()
+
         attachments = works_report_controller.answer_menu(works_report_controller.questions[0])
 
         im_channel = slack_client.api_call("im.open", user=user)['channel'].get('id')
@@ -166,7 +167,8 @@ def _command_handler(channel, user, message):
         # TODO заполнить из странички-админки
         DBController.add_group(WorkGroup(dict(
             channel=str(YOUR_DIRECT_CHANNEL),
-            users=[User(YOUR_USER_ID, slack_client.api_call("im.open", user=YOUR_USER_ID)['channel'].get('id'))],
+            users=[User(YOUR_USER_ID, slack_client.api_call("im.open", user=YOUR_USER_ID)['channel'].get('id')),
+            User('UHTJL2NKZ', slack_client.api_call("im.open", user='UHTJL2NKZ')['channel'].get('id'))],
             times={1:'7:30'})).serialize())
 
         slack_client.api_call(
@@ -184,25 +186,13 @@ def _command_handler(channel, user, message):
     if commands[2] in message_words:
         print(commands[2], message)
         print('SCHEDULE START')
-        schedule_controller.schedule_group_reminder(None)
+        schedule_controller.schedule_StandUp(None)
         return True
 
     if commands[3] in message_words:
         print(commands[3], message)
         print('SCHEDULE STOP')
         schedule_controller.stop_all()
-        return True
-
-    if commands[4] in message_words:
-        print(commands[4], message)
-        print('REPORT START')
-        schedule_controller.schedule_group_report(None)
-        return True
-
-    if commands[5] in message_words:
-        print(commands[5], message)
-        print('QUESTIONS START')
-        schedule_controller.schedule_group_questionnaire(None)
         return True
 
     else:
@@ -236,7 +226,7 @@ def _message_handler(message_event):
                                                                   user_id=user,
                                                                   real_user_name=real_user_name,
                                                                   ts_answer=time.time())
-            work_group = WorkGroup(DBController.get_group({'serial_id':0})
+            work_group = WorkGroup(DBController.get_group({'serial_id':0}))
             work_group.update_reports(report=works_report_controller.report.serialize(),
                                       ts_reports=works_report_controller.ts_report)
 
