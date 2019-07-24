@@ -7,9 +7,12 @@ from slackeventsapi import SlackEventAdapter
 import schedule
 import time
 from pprint import pprint
+import uuid
 
 from WorksReportController import WorksReportController
 from InitController import InitController
+from WorkGroup import WorkGroup
+from DBController import DBController
 from ScheduleController import ScheduleController
 
 init_controller = InitController()
@@ -59,52 +62,65 @@ def message_options():
 # The endpoint Slack will send the user's menu selection to
 @app.route("/slack/message_actions", methods=["POST"])
 def message_actions():
-    # Parse the request payload
+    global time
     form_json = json.loads(request.form["payload"])
     print('\n\n\nPAYLOAD:\n', form_json["type"], '\n\n\n\n')
     pprint(form_json)
 
     channel = form_json["channel"]["id"]
+    user = form_json["user"]["id"]
+
     if form_json["type"] == "interactive_message":
         if form_json['actions'][0]['name'] == str("short_answer_list"):
             # Check to see what the user's selection was and update the message accordingly
             selection = form_json["actions"][0]["selected_options"][0]["value"]
             short_answer = works_report_controller.take_short_answer(selection)
+            attachments = works_report_controller.remember_answer(
+                question=works_report_controller.questions[works_report_controller.question_counter],
+                answer=short_answer,
+                user_id=user,
+                real_user_name=get_real_user_name(user),
+                ts_answer=time.time())
 
-            response = slack_client.api_call(
+            work_group = WorkGroup(DBController.get_group(0))
+            work_group.update_reports(report=works_report_controller.report.serialize(),
+                                      ts_reports=works_report_controller.ts_report)
+
+            slack_client.api_call(
                 "chat.update",
-                channel=form_json["channel"]["id"],
+                channel=channel,
                 ts=form_json["message_ts"],
                 text="Your answer is {}  :coffee:".format(short_answer),
                 attachments=[]  # empty `attachments` to clear the existing massage attachments
             )
 
+            slack_client.api_call("chat.postMessage",
+                                  channel=work_group.channel,  # TODO отправлять в тред РГ
+                                  text=attachments[0],
+                                  attachments=attachments[1])
+
             # Send an HTTP 200 response with empty body so Slack knows we're done here
             return make_response("", 200)
 
         if form_json['actions'][0]['name'] == "init_standup":
-            open_dialog = slack_client.api_call(
-                "dialog.open",
-                trigger_id=form_json["trigger_id"],
-                dialog=init_controller.create_dialog(form_json["channel"]["id"])
-            )
-
-            print('\nopen_dialog: ', open_dialog)
-
-            # Update the message to show that we're in the process of taking their order
-            slack_client.api_call(
-                "chat.update",
-                channel=channel,
-                ts=form_json["message_ts"],
-                text=":pencil: Note your answers"
-            )
-
+            # open_dialog = slack_client.api_call(
+            #     "dialog.open",
+            #     trigger_id=form_json["trigger_id"],
+            #     dialog=init_controller.create_dialog(form_json["channel"]["id"])
+            # )
+            #
+            # print('\nopen_dialog: ', open_dialog)
+            #
+            # # Update the message to show that we're in the process of taking their order
+            # slack_client.api_call(
+            #     "chat.update",
+            #     channel=channel,
+            #     ts=form_json["message_ts"],
+            #     text=":pencil: Note your answers"
+            # )
+            #
             # send_message(_channel, 'Whom to invite?')
-            slack_client.api_call(
-                "chat.postMessage",
-                channel=channel,
-                text="Whom to invite?"
-            )
+
             return make_response("", 200)
 
     elif form_json["type"] == "dialog_submission":
@@ -135,21 +151,33 @@ def _command_handler(channel, user, message):
 
         # works_report_controller = WorksReportController()
         attachments = works_report_controller.answer_menu(works_report_controller.questions[0])
+
+        im_channel = slack_client.api_call("im.open", user=user)['channel'].get('id')
         slack_client.api_call("chat.postMessage",
-                              channel=channel,
+                              channel=im_channel,
                               text=attachments[0],
                               attachments=attachments[1])
         return True
 
     if commands[1] in message_words:
         print(commands[1], message)
-        print('INPUT')
+
+        # TODO заполнить из странички-админки
+        DBController.add_group(WorkGroup(dict(
+            channel='DHCLCG8DQ',
+            users=['UHTJL2NKZ'],
+            times='7:30')).serialize())
+
+        slack_client.api_call(
+            "chat.postMessage",
+            channel=channel,
+            text="Add group to database"
+        )
 
         slack_client.api_call("chat.postMessage",
                               channel=channel,
                               text="Init new standUP",
-                              attachments=init_controller.init_menu(channel=channel))
-        print('OPEN')
+                              attachments=[])
         return True
 
     if commands[2] in message_words:
@@ -199,16 +227,22 @@ def _message_handler(message_event):
 
     if user:
         real_user_name = get_real_user_name(user)
-        
+
         # предыдущее вопрос?
         current_message, previous_message = _take_answer(message_event)
         print('current_message, previous_message', current_message, previous_message)
         if previous_message in WorksReportController().questions:
             attachments = works_report_controller.remember_answer(answer=current_message,
                                                                   question=previous_message,
-                                                                  real_user_name=real_user_name)
+                                                                  user_id=user,
+                                                                  real_user_name=real_user_name,
+                                                                  ts_answer=time.time())
+            work_group = WorkGroup(DBController.get_group(0))
+            work_group.update_reports(report=works_report_controller.report.serialize(),
+                                      ts_reports=works_report_controller.ts_report)
+
             slack_client.api_call("chat.postMessage",
-                                  channel=channel,
+                                  channel=work_group.channel,  # TODO отправлять в тред РГ
                                   text=attachments[0],
                                   attachments=attachments[1])
         # TODO продумать нормальный init бота
@@ -336,6 +370,16 @@ def bot_added(event):
     _first_message(channel)
 
 
+def check_db_status():
+    db_len = 0
+    for _ in DBController.get_all_groups():
+        db_len += 1
+    if db_len == 0:
+        print('First setup database...')
+        DBController.first_setup()
+
+
 if __name__ == '__main__':
+    check_db_status()
     port = int(os.getenv('PORT', 5000))
     app.run(debug=False, port=port, host='0.0.0.0')
