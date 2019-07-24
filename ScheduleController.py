@@ -39,7 +39,7 @@ class ScheduleController:
         # get time and weekday from db
 
         # ====================хардкод====
-        weekday = 1
+        weekday = 0
         time = "12:00"
         # TODO take real group channel, now it is "test" channel
         group_channel = "CL67NCJ0J"
@@ -54,7 +54,7 @@ class ScheduleController:
         members_channels = [str(YOUR_DIRECT_CHANNEL)]
         time = "16:20"
         #time=2
-        weekday = 2
+        weekday = 0
         # ================================
 
         self.add_scheduled_job(time, weekday, self.send_question_messages, members_channels)
@@ -137,27 +137,15 @@ class ScheduleController:
 
     # parse day number and start scheduler with job
     # could be used for different tasks
-    def add_scheduled_job(self, time, day, job, *args):#method, channel, text="text", attachments=[]):
+    def add_scheduled_job(self, time, day, job, *args):
         assert 0 <= day < 7, "invalid day value"
-        
-        # TODO change parser
-        if day == 0:
-            print("MONDAY JOB")
-            #schedule.every().monday.at(time).do(job, method=method, channel=channel, text=text, attachments=attachments)
-            schedule.every(5).seconds.do(job, *args)#method=method, channel=channel, text=text, attachments=attachments)
-        elif day == 1:
-            print("TUESDAY JOB")
-            #schedule.every().tuesday.at(time).do(job,*args) 
-            schedule.every(5).seconds.do(job, *args)
-        elif day == 2:
-            print("WENDSDAY JOB")
-            #schedule.every().wednesday.at(time).do(job, *args)
-            schedule.every(15).seconds.do(job, *args)
-        elif day == 3:
-            schedule.every().thursday.at(time).do(job, *args)
-        elif day == 4:
-            schedule.every().friday.at(time).do(job, *args)
-        elif day == 5:
-            schedule.every().saturday.at(time).do(job, *args)
-        else:
-            schedule.every().sunday.at(time).do(job, *args)
+        # Now monday day for tests
+        {
+            0: lambda job, *args: schedule.every(5).seconds.do(job, *args), #schedule.every().monday.at(time).do(job, *args)
+            1: lambda job, *args: schedule.every().tuesday.at(time).do(job,*args), 
+            2: lambda job, *args: schedule.every().wednesday.at(time).do(job,*args), 
+            3: lambda job, *args: schedule.every().thursday.at(time).do(job,*args),
+            4: lambda job, *args: schedule.every().friday.at(time).do(job,*args), 
+            5: lambda job, *args: schedule.every().saturday.at(time).do(job,*args), 
+            6: lambda job, *args: schedule.every().sunday.at(time).do(job,*args) 
+        }[day](job, *args)

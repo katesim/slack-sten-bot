@@ -37,13 +37,9 @@ schedule.run_continuously()
 # List of commands for bot
 commands = ['/q', '/init', '/remind', '/stop', '/report', '/start']
 
-global inviter_list
-global days_list
 global works_report_controller
 global schedule_controller
 
-days_list = []
-inviter_list = []
 works_report_controller = WorksReportController()
 schedule_controller = ScheduleController(slack_client, works_report_controller)
 
@@ -213,8 +209,6 @@ def _command_handler(channel, user, message):
 
 
 def _message_handler(message_event):
-    global inviter_list
-    global days_list
     global works_report_controller
 
     subtype = message_event.get("subtype")
@@ -249,24 +243,6 @@ def _message_handler(message_event):
                                   channel=work_group.channel,  # TODO отправлять в тред РГ
                                   text=attachments[0],
                                   attachments=attachments[1])
-        # TODO продумать нормальный init бота
-        elif previous_message == 'Whom to invite?':
-            inviter_list.append(current_message)
-            slack_client.api_call("chat.postMessage",
-                                  channel=channel,
-                                  text=str(inviter_list))
-            slack_client.api_call("chat.postMessage",
-                                  channel=channel,
-                                  text='Days?')
-
-        elif previous_message == 'Days?':
-            days_list.append(current_message)
-            slack_client.api_call("chat.postMessage",
-                                  channel=channel,
-                                  text='Init',
-                                  attachments=init_controller.create_report_init(inviter_list, days_list))
-            inviter_list = []
-            days_list = []
     return make_response("Message Sent", 200, )
 
     # ============= Event Type Not Found! ============= #
