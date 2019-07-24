@@ -2,6 +2,9 @@ import schedule
 import time
 import os
 
+from WorkGroup import WorkGroup
+from DBController import DBController
+
 YOUR_DIRECT_CHANNEL = os.environ.get("YOUR_DIRECT_CHANNEL")
 YOUR_USER_ID = os.environ.get("YOUR_USER_ID")
 
@@ -12,57 +15,50 @@ class ScheduleController:
 
     # activate schedule events for all StandUp activity for work group
     def schedule_StandUp(self, group_channel):
-        self.schedule_group_questionnaire(group_channel)
-        self.schedule_group_reminder(group_channel)
-        self.schedule_group_report(group_channel)
+        work_group = WorkGroup(DBController.get_group({'channel':group_channel}))
+        users_list = work_group.users
+        times = work_group.times
+        im_channels = self.users_to_im_channels(users_list)
+        self.schedule_group_questionnaire(group_channel, im_channels, times)
+        self.schedule_group_reminder(group_channel, im_channels, times)
+        self.schedule_group_report(group_channel, times)
+    
+    def users_to_im_channels(self, users_list):
+        return [self.slack_client.api_call("im.open", user=user)['channel'].get('id') for user in users_list]
+        
 
-    def schedule_group_reminder(self, group_channel):
-        # TODO some methods from DBController to get info from database
-        # group_info = get_group_info(group_channel)
-        # group_members_channels = group_info.get("members_channels")
-        # time = group_info.get("time")
+    def schedule_group_reminder(self, group_channel, im_channels, times):
         
         print("FORM REMINDER")
 
-        # сейчас хардкод =================
-        members_channels = [str(YOUR_DIRECT_CHANNEL)]
-        time = "16:20"
-        #time=2
-        weekday = 0
-        # ================================
+        for weekday in times.keys():
+            time, weekday = self.minus_hours(times[weekday], weekday)
+            time = self.formatted_time(time)
+            print("ADD SCHEDULE JOB FOR DAY", weekday)
+            self.add_scheduled_job(time, weekday, self.send_reminder_messages, im_channels)
 
-        print("ADD SCHEDULE JOB")
-        self.add_scheduled_job(time, weekday, self.send_reminder_messages, members_channels)
-
-    def schedule_group_report(self, group_channel):
+    def schedule_group_report(self, group_channel, time):
         print("FORM REPORT")
         # get time and weekday from db
 
-        # ====================хардкод====
-        weekday = 0
-        time = "12:00"
-        # TODO take real group channel, now it is "test" channel
-        group_channel = "CL67NCJ0J"
-        # ====================хардкод====
+        for weekday in times.keys():
+            time, weekday = self.plus_hours(times[weekday], weekday)
+            time = self.formatted_time(time)
+            print("ADD SCHEDULE JOB FOR DAY", weekday)
+            self.add_scheduled_job(time, weekday, self.send_report_message, group_channel)
 
-        self.add_scheduled_job(time, weekday, self.send_report_message, group_channel)
-
-    def schedule_group_questionnaire(self, group_channel):
+    def schedule_group_questionnaire(self, group_channel, im_channels):
         print("FORM QUESTIONNARE")
 
-         # сейчас хардкод =================
-        members_channels = [str(YOUR_DIRECT_CHANNEL)]
-        time = "16:20"
-        #time=2
-        weekday = 0
-        # ================================
+        for weekday in times.keys():
+            time = self.formatted_time(times[weekday])
+            print("ADD SCHEDULE JOB FOR DAY", weekday)
+            self.add_scheduled_job(time, weekday, self.send_question_messages, im_channels)
 
-        self.add_scheduled_job(time, weekday, self.send_question_messages, members_channels)
-
-    def send_question_messages(self, members_channels):
+    def send_question_messages(self, im_channels):
 
         attachments = self.works_report_controller.answer_menu(self.works_report_controller.questions[0])
-        for member_channel in members_channels:
+        for member_channel in im_channels:
             print("SEND QUESTION MESSAGE FOR MEMBER", member_channel)
                 
             # works_report_controller = WorksReportController()
@@ -99,6 +95,8 @@ class ScheduleController:
         reminder_message = "There's one hour left until the end of the StandUp."
         
         for member_channel in members_channels:
+            # if report is empty
+            if DBController.reports
             self.slack_client.api_call("chat.postMessage", 
                                             channel=member_channel, 
                                             text=reminder_message)
