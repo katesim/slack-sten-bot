@@ -8,6 +8,7 @@ import schedule
 import time
 from pprint import pprint
 import uuid
+from collections import namedtuple
 
 from WorksReportController import WorksReportController
 from InitController import InitController
@@ -82,7 +83,7 @@ def message_actions():
                 real_user_name=get_real_user_name(user),
                 ts_answer=time.time())
 
-            work_group = WorkGroup(DBController.get_group(0))
+            work_group = WorkGroup(DBController.get_group({'serial_id':0})
             work_group.update_reports(report=works_report_controller.report.serialize(),
                                       ts_reports=works_report_controller.ts_report)
 
@@ -161,12 +162,12 @@ def _command_handler(channel, user, message):
 
     if commands[1] in message_words:
         print(commands[1], message)
-
+        User = namedtuple('User', 'user_id im_channel')
         # TODO заполнить из странички-админки
         DBController.add_group(WorkGroup(dict(
             channel=str(YOUR_DIRECT_CHANNEL),
-            users=[str(YOUR_USER_ID)],
-            times='7:30')).serialize())
+            users=[User(YOUR_USER_ID, slack_client.api_call("im.open", user=YOUR_USER_ID)['channel'].get('id'))],
+            times={1:'7:30'})).serialize())
 
         slack_client.api_call(
             "chat.postMessage",
@@ -235,7 +236,7 @@ def _message_handler(message_event):
                                                                   user_id=user,
                                                                   real_user_name=real_user_name,
                                                                   ts_answer=time.time())
-            work_group = WorkGroup(DBController.get_group(0))
+            work_group = WorkGroup(DBController.get_group({'serial_id':0})
             work_group.update_reports(report=works_report_controller.report.serialize(),
                                       ts_reports=works_report_controller.ts_report)
 
@@ -310,31 +311,25 @@ def message(event):
     pprint(event)
     print("\n")
     # ============= MESSAGE FROM USER ============= #
-
     if subtype == None:#!= "bot_message":
 
         channel = message_event["channel"]
         # im means direct messages
-        # ============= DIRECT MESSAGE FROM USER ============= #
         if channel_type == "im":
 
             user = message_event.get("user")
             message = message_event.get("text")
 
             # bot mentioning implies command
-            # ============= USER MENTIONED BOT IN DIRECT MESSAGE TO BOT ============= #
             if str(BOT_MENTIONED) in message:
                 print("BOT WAS MENTIONED IN DIRECT MESSAGE FROM USER", "\n")
                 _command_handler(channel, user, message)
-            # ============= SIMPLE DIRECT MESSAGE FROM USER ============= #
             else:
                 print("DIRECT MESSAGE FROM USER TO BOT")
                 _message_handler(message_event)
-        # ============= CHANNEL MESSAGE FROM USER ============= #
         else:
             print("CHANNEL MESSAGE FROM USER")
 
-    # ============= MESSAGE FROM BOT ============= #
     if subtype == "bot_message" and message_event.get("attachments") != None:
         print("BOT INTERACTIVE MESSAGE")
         # pprint(event)

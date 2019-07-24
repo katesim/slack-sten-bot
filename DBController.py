@@ -32,8 +32,8 @@ class DBController:
                               )
 
     @classmethod
-    def get_group(cls, serial_id) -> dict:
-        return cls.groups.find_one({'serial_id': serial_id})
+    def get_group(cls, filtered_field: dict) -> dict:
+        return cls.groups.find_one(filtered_field)
 
     @classmethod
     def get_all_groups(cls, filter_fields=None):
@@ -65,4 +65,4 @@ class DBController:
 if __name__ == '__main__':
     DBController.first_setup()
     DBController.add_group(group={})
-    pprint(DBController.get_group(0))
+    pprint(DBController.get_group({"serial_id":0})
