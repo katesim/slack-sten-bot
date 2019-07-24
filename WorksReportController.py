@@ -5,14 +5,14 @@ from pprint import pprint
 
 class Report:
     def __init__(self, user_id: str):
-        self.id_user = user_id
+        self.user_id = user_id
         self.cells = []
 
     def add_answer(self, cell: namedtuple('Cell', 'question answer ts_answer')):
         self.cells.append(cell)
 
     def serialize(self):
-        return {'id_user': self.id_user,
+        return {'id_user': self.user_id,
                 'answers': self.cells}
 
     def __getitem__(self, index):
@@ -40,7 +40,8 @@ class WorksReportController:
 
         self.questions = questions
         self.short_answers = short_answers
-        self.report = Report(user_id='')
+        self.report = None
+        self.ts_report = None
         self.question_counter = 0
         self.real_name_user = None
         self.Cell = namedtuple('Cell', 'question answer ts_answer')
@@ -57,9 +58,18 @@ class WorksReportController:
             menu_options['options'].append(dict(text=answer[1], value=answer[0]))
         return menu_options
 
-    def remember_answer(self, question, answer, real_user_name, ts_answer=None):
+    def remember_answer(self, question, answer, user_id, real_user_name, ts_answer):
+        if self.question_counter == 0:
+            self.report = Report(user_id=user_id)
+
         self.report.add_answer(self.Cell(question, answer, ts_answer))
         self.question_counter += 1
+        self.ts_report = None
+
+        if answer in [short_answer[1] for short_answer in self.short_answers]:
+            self.question_counter = 0
+            return self.create_report(real_user_name)
+
         try:
             return self.answer_menu(question=self.questions[self.question_counter])
         except:
@@ -85,7 +95,7 @@ class WorksReportController:
         ])
 
     def create_report(self, real_name_user):
-        print("real_name_user", real_name_user)
+        self.ts_report = time.time()
         return ('New report', [
             {
                 "fallback": "Upgrade your Slack client to use messages like these.",
@@ -94,7 +104,7 @@ class WorksReportController:
                 "attachment_type": "default",
                 "title": "Report",
                 "text": str(self.report),
-                "ts": time.time()
+                "ts": self.ts_report
             }
         ])
 

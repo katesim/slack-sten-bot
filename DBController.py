@@ -25,9 +25,9 @@ class DBController:
         return number['seq']
 
     @classmethod
-    def add_group(cls, group, uuid):
+    def add_group(cls, group):
         cls.groups.insert_one({**group,
-                               '_id': uuid,
+                               '_id': str(uuid.uuid4()),
                                'serial_id': 0}
                               )
 
@@ -46,8 +46,23 @@ class DBController:
         filter_fields = filter_fields if filter_fields else dict()
         cls.groups.remove(filter_fields)
 
+    @classmethod
+    def update_reports(cls, channel, reports, ts_reports):
+        cls.groups.update_one(
+            {
+            'channel': channel,
+            },
+            {'$set': {
+                'reports': reports,
+                'ts_reports': ts_reports
+            },
+            }
+        )
+        print('UPD REPORTS IN DB')
+
+
 
 if __name__ == '__main__':
     DBController.first_setup()
-    DBController.add_group(group={}, uuid=str(uuid.uuid4()))
+    DBController.add_group(group={})
     pprint(DBController.get_group(0))
