@@ -120,7 +120,7 @@ class ScheduleController:
         return new_time, weekday
 
     # formatting time for schedule 
-    def format_time(self, time):
+    def formatted_time(self, time):
         assert ":" in time, "time format should be hh:mm or h:mm"
 
         hour, minute = time.split(":")
@@ -132,8 +132,7 @@ class ScheduleController:
             hour = "0{}".format(hour)
         if len_minute < 2:
             minute = "0{}".format(minute)
-        new_time = "{}:{}".format(hour, minute)
-        return new_time
+        return "{}:{}".format(hour, minute)
 
 
     # parse day number and start scheduler with job
