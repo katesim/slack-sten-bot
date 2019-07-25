@@ -14,13 +14,6 @@ class Report:
     def __getitem__(self, index):
         return self.report[self.user_id][index]
 
-    def __str__(self):
-        res = ''
-        # for text in ["*" + a.question + "* \n " + a.answer + "\n" for a in self.report[self.user_id]]:
-        for text in self.report[self.user_id]:
-            res += text.question
-        return res
-
 
 class WorksReportController:
     def __init__(self, questions=None, short_answers=None):
@@ -87,6 +80,11 @@ class WorksReportController:
 
     def create_report(self, real_name_user, user_id):
         self.ts_report = time.time()
+
+        res = ''
+        for text in ["*" + a.question + "* \n " + a.answer + "\n" for a in self.reports[user_id]]:
+            res += text
+
         return ('New report', [
             {
                 "fallback": "Upgrade your Slack client to use messages like these.",
@@ -94,7 +92,7 @@ class WorksReportController:
                 "author_name": real_name_user,
                 "attachment_type": "default",
                 "title": "Report",
-                "text": str(self.reports[user_id]),
+                "text": res,
                 "ts": self.ts_report
             }
         ])
@@ -109,7 +107,4 @@ if __name__ == '__main__':
     report.add_answer(Cell('What did you do yesterday?', 'work', ts))
     report.add_answer(Cell('What are you planning do today?', 'rest', ts))
     report.add_answer(Cell('Any problem?', 'No', ts))
-
-    # print('first answer:', report.cells[0].answer)
-    print('reports:')
-    pprint(report.serialize())
+    print(report)
