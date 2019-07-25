@@ -6,6 +6,7 @@ from slackeventsapi import SlackEventAdapter
 import schedule
 import time
 from pprint import pprint
+import uuid
 from collections import namedtuple
 
 from WorksReportController import WorksReportController
@@ -34,7 +35,7 @@ slack_events_adapter = SlackEventAdapter(SIGNING_SECRET, "/slack/events", app)
 schedule.run_continuously()
 
 # List of commands for bot
-commands = ['/q', '/init', '/remind', '/stop', '/report', '/start']
+commands = ['/q', '/init', '/start', '/stop']
 
 global works_report_controller
 global schedule_controller
@@ -149,6 +150,7 @@ def _command_handler(channel, user, message):
                               text="command q")
 
         # works_report_controller = WorksReportController()
+
         attachments = works_report_controller.answer_menu(works_report_controller.questions[0])
 
         im_channel = slack_client.api_call("im.open", user=user)['channel'].get('id')
@@ -160,13 +162,11 @@ def _command_handler(channel, user, message):
 
     if commands[1] in message_words:
         print(commands[1], message)
-        User = namedtuple('User', 'user_id im_channel')
         # TODO заполнить из странички-админки
         DBController.add_group(WorkGroup(dict(
             channel=str(YOUR_DIRECT_CHANNEL),
-            users=[User(YOUR_USER_ID, slack_client.api_call("im.open", user=YOUR_USER_ID)['channel'].get('id'))],
-                   # User('UHTUFSFN2', slack_client.api_call("im.open", user='UHTUFSFN2')['channel'].get('id'))],
-            times='7:30')).serialize())
+            users=[(YOUR_USER_ID, slack_client.api_call("im.open", user=YOUR_USER_ID)['channel'].get('id'))],
+            times={'0':'7:30'})).serialize())
 
         slack_client.api_call(
             "chat.postMessage",
@@ -183,25 +183,14 @@ def _command_handler(channel, user, message):
     if commands[2] in message_words:
         print(commands[2], message)
         print('SCHEDULE START')
-        schedule_controller.schedule_group_reminder(None)
+        # TODO take group channel
+        schedule_controller.schedule_StandUp(YOUR_DIRECT_CHANNEL)
         return True
 
     if commands[3] in message_words:
         print(commands[3], message)
         print('SCHEDULE STOP')
         schedule_controller.stop_all()
-        return True
-
-    if commands[4] in message_words:
-        print(commands[4], message)
-        print('REPORT START')
-        schedule_controller.schedule_group_report(None)
-        return True
-
-    if commands[5] in message_words:
-        print(commands[5], message)
-        print('QUESTIONS START')
-        schedule_controller.schedule_group_questionnaire(None)
         return True
 
     else:
@@ -310,31 +299,25 @@ def message(event):
     pprint(event)
     print("\n")
     # ============= MESSAGE FROM USER ============= #
-
     if subtype == None:#!= "bot_message":
 
         channel = message_event["channel"]
         # im means direct messages
-        # ============= DIRECT MESSAGE FROM USER ============= #
         if channel_type == "im":
 
             user = message_event.get("user")
             message = message_event.get("text")
 
             # bot mentioning implies command
-            # ============= USER MENTIONED BOT IN DIRECT MESSAGE TO BOT ============= #
             if str(BOT_MENTIONED) in message:
                 print("BOT WAS MENTIONED IN DIRECT MESSAGE FROM USER", "\n")
                 _command_handler(channel, user, message)
-            # ============= SIMPLE DIRECT MESSAGE FROM USER ============= #
             else:
                 print("DIRECT MESSAGE FROM USER TO BOT")
                 _message_handler(message_event)
-        # ============= CHANNEL MESSAGE FROM USER ============= #
         else:
             print("CHANNEL MESSAGE FROM USER")
 
-    # ============= MESSAGE FROM BOT ============= #
     if subtype == "bot_message" and message_event.get("attachments") != None:
         print("BOT INTERACTIVE MESSAGE")
         # pprint(event)

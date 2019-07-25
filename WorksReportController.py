@@ -119,6 +119,6 @@ if __name__ == '__main__':
     report.add_answer(Cell('What are you planning do today?', 'rest', ts))
     report.add_answer(Cell('Any problem?', 'No', ts))
 
-    print('first answer:', report.cells[0].answer)
+    #print('first answer:', report.cells[0].answer)
     print('reports:')
     pprint(report.serialize())
