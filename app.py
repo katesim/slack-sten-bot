@@ -97,6 +97,7 @@ def message_actions():
                                   channel=work_group.channel,  # TODO отправлять в тред РГ
                                   text=attachments[0],
                                   attachments=attachments[1])
+            works_report_controller.forgot_old_report(user)
 
             # Send an HTTP 200 response with empty body so Slack knows we're done here
             return make_response("", 200)
@@ -226,6 +227,7 @@ def _message_handler(message_event):
                                                                   real_user_name=real_user_name,
                                                                   ts_answer=time.time())
             work_group = DBController.get_group({'serial_id': 0})
+            print("WORK CONTROLLER REPORTS", works_report_controller.reports)
             work_group.update_reports(reports=works_report_controller.reports,
                                       ts_reports=works_report_controller.ts_report)
             DBController.update_reports(work_group)
@@ -234,6 +236,7 @@ def _message_handler(message_event):
                                       channel=work_group.channel,  # TODO отправлять в тред РГ
                                       text=attachments[0],
                                       attachments=attachments[1])
+                works_report_controller.forgot_old_report(user)
             else:
                 slack_client.api_call("chat.postMessage",
                                       channel=channel,  # отправлять следующий вопрос
