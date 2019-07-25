@@ -46,6 +46,7 @@ class WorksReportController:
         self.real_name_user = None
         self.Cell = namedtuple('Cell', 'question answer ts_answer')
         self.is_finished = False
+        self.ts_thread = None
 
     def take_short_answer(self, selection=str):
         for answer in self.short_answers:

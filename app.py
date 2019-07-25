@@ -61,6 +61,7 @@ def message_options():
 @app.route("/slack/message_actions", methods=["POST"])
 def message_actions():
     global time
+    global works_report_controller
     form_json = json.loads(request.form["payload"])
     print('\n\n\nPAYLOAD:\n', form_json["type"], '\n\n\n\n')
     pprint(form_json)
@@ -92,11 +93,12 @@ def message_actions():
                 text="Your answer is {}  :coffee:".format(short_answer),
                 attachments=[]  # empty `attachments` to clear the existing massage attachments
             )
-            print("IM HERE")
+            print("!!!!!!!!!!!!!!!!!!!!!!!!!!TS SHORT ANSWER", works_report_controller.ts_thread)
             slack_client.api_call("chat.postMessage",
-                                  channel=work_group.channel,  # TODO отправлять в тред РГ
+                                  channel= "CL67NCJ0J",#work_group.channel,  # TODO отправлять в тред РГ
                                   text=attachments[0],
-                                  attachments=attachments[1])
+                                  attachments=attachments[1],
+                                  thread_ts=works_report_controller.ts_thread)
 
             # Send an HTTP 200 response with empty body so Slack knows we're done here
             return make_response("", 200)
@@ -148,7 +150,14 @@ def _command_handler(channel, user, message):
                               channel=channel,
                               text="command q")
 
+        # ================================================
+        ts = set_report_ts("CL67NCJ0J")
+        #work_group = DBController.get_group({'serial_id': 0})
+        #work_group.ts_reports = ts
+        #DBController.update_reports(work_group)
+        works_report_controller.ts_thread = ts
         # works_report_controller = WorksReportController()
+        print("ST THREAD FOR Q")
 
         attachments = works_report_controller.answer_menu(works_report_controller.questions[0])
 
@@ -234,12 +243,12 @@ def _message_handler(message_event):
                 output_channel = "CL67NCJ0J"
                 # temporary for test # TODO move to schedule ts save
                 # save ts into workgroup db? think about it
-                ts = get_update_ts(output_channel)
+                #ts = work_group.ts_reports
                 slack_client.api_call("chat.postMessage",
                                   channel=output_channel,  # TODO отправлять в тред РГ work_group.channel
                                   text=attachments[0],
                                   attachments=attachments[1],
-                                  thread_ts = ts)
+                                  thread_ts = works_report_controller.ts_thread)
             
             else:
                 output_channel = channel 
@@ -249,7 +258,7 @@ def _message_handler(message_event):
                                     attachments=attachments[1])
     return make_response("Message Sent", 200, )
 
-def get_update_ts(output_channel):
+def set_report_ts(output_channel):
     response = slack_client.api_call("chat.postMessage",
                                 channel = output_channel,
                                 text = "Update for {} WorkGroup".format(output_channel))
