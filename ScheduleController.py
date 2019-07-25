@@ -38,7 +38,7 @@ class ScheduleController:
     def send_reminder_messages(self, group_channel, users):
         reminder_message = "There's one hour left until the end of the StandUp."
         # need actual info
-        work_group = WorkGroup(DBController.get_group({'channel':group_channel}))
+        work_group = DBController.get_group({'channel':group_channel})
         reports = work_group.reports
         for user in users:
             # if report is empty  
@@ -62,7 +62,7 @@ class ScheduleController:
         
         report_message = "No answer"
         # if empty send no answer
-        work_group = WorkGroup(DBController.get_group({'channel':group_channel}))
+        work_group = DBController.get_group({'channel':group_channel})
         reports = work_group.reports
         
         for user in users:
@@ -143,7 +143,7 @@ class ScheduleController:
         assert 0 <= day < 7, "invalid day value"
         # Now monday day for tests
         {
-            0: lambda job, *args: schedule.every(15).seconds.do(job, *args), # schedule.every().monday.at(time).do(job, *args)
+            0: lambda job, *args: schedule.every(20).seconds.do(job, *args), # schedule.every().monday.at(time).do(job, *args)
             1: lambda job, *args: schedule.every().tuesday.at(time).do(job,*args), # schedule.every(20).seconds.do(job, *args), #
             2: lambda job, *args: schedule.every().wednesday.at(time).do(job,*args), # schedule.every(25).seconds.do(job, *args),
             3: lambda job, *args: schedule.every().thursday.at(time).do(job,*args),
