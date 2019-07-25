@@ -6,12 +6,10 @@ from slackeventsapi import SlackEventAdapter
 import schedule
 import time
 from pprint import pprint
-import uuid
 from collections import namedtuple
 
 from WorksReportController import WorksReportController
 from InitController import InitController
-from WorkGroup import WorkGroup
 from DBController import DBController
 from ScheduleController import ScheduleController
 
@@ -82,9 +80,10 @@ def message_actions():
                 real_user_name=get_real_user_name(user),
                 ts_answer=time.time())
 
-            work_group = WorkGroup(DBController.get_group({'serial_id': 0}))
-            work_group.update_reports(report=works_report_controller.report.serialize(),
+            work_group = DBController.get_group({'serial_id': 0})
+            work_group.update_reports(reports=works_report_controller.reports,
                                       ts_reports=works_report_controller.ts_report)
+            DBController.update_reports(work_group)
 
             slack_client.api_call(
                 "chat.update",
@@ -163,10 +162,11 @@ def _command_handler(channel, user, message):
     if commands[1] in message_words:
         print(commands[1], message)
         # TODO заполнить из странички-админки
-        DBController.add_group(WorkGroup(dict(
+        DBController.add_group(dict(
             channel=str(YOUR_DIRECT_CHANNEL),
-            users=[(YOUR_USER_ID, slack_client.api_call("im.open", user=YOUR_USER_ID)['channel'].get('id'))],
-            times={'0':'7:30'})).serialize())
+            users=[User(YOUR_USER_ID, slack_client.api_call("im.open", user=YOUR_USER_ID)['channel'].get('id'))],
+                   # User('UL4D3C0HG', slack_client.api_call("im.open", user='UL4D3C0HG')['channel'].get('id'))],
+            times='7:30'))
 
         slack_client.api_call(
             "chat.postMessage",
@@ -224,9 +224,10 @@ def _message_handler(message_event):
                                                                   user_id=user,
                                                                   real_user_name=real_user_name,
                                                                   ts_answer=time.time())
-            work_group = WorkGroup(DBController.get_group({'serial_id': 0}))
-            work_group.update_reports(report=works_report_controller.report.serialize(),
+            work_group = DBController.get_group({'serial_id': 0})
+            work_group.update_reports(reports=works_report_controller.reports,
                                       ts_reports=works_report_controller.ts_report)
+            DBController.update_reports(work_group)
 
             slack_client.api_call("chat.postMessage",
                                   channel=work_group.channel,  # TODO отправлять в тред РГ
