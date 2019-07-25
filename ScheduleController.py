@@ -20,7 +20,7 @@ class ScheduleController:
         times = work_group.times
         im_channels = self.users_to_im_channels(users)
         self.schedule_group_questionnaire(im_channels, times)
-        self.schedule_no_answer(im_channels, times)
+        self.schedule_no_answer(group_channel, im_channels, times)
         self.schedule_group_report(group_channel, users, times)
     
     # TODO take channels from bd with users
@@ -28,7 +28,7 @@ class ScheduleController:
         return [self.slack_client.api_call("im.open", user=user)['channel'].get('id') for user in users]
         
     # send reminder message if member didn't answer any question
-    def schedule_no_answer(self, im_channels, times): 
+    def schedule_no_answer(self, group_channel, im_channels, times): 
         print("FORM REMINDER")
         # add reminder for every report day
         for weekday in times.keys():
@@ -36,7 +36,7 @@ class ScheduleController:
             time, weekday = self.plus_hours(times[weekday], weekday, hour_shift=1)
             time = self.formatted_time(time)
             print("ADD SCHEDULE REMINDER JOB FOR DAY", weekday)
-            self.add_scheduled_job(time, weekday, self.send_reminder_messages, im_channels)
+            self.add_scheduled_job(time, weekday, self.send_reminder_messages, group_channel, im_channels)
 
     def schedule_group_report(self, group_channel, users, times):
         print("FORM REPORT")
@@ -45,7 +45,7 @@ class ScheduleController:
             time, weekday = self.plus_hours(times[weekday], weekday, hour_shift=3)
             time = self.formatted_time(time)
             print("ADD SCHEDULE REPORT JOB FOR DAY", weekday)
-            self.add_scheduled_job(time, weekday, self.send_report_message, group_channel, users)
+            self.add_scheduled_job(time, weekday, self.send_no_answer_report, group_channel, users)
 
     def schedule_group_questionnaire(self, im_channels, times):
         print("FORM QUESTIONNARE")
@@ -68,35 +68,32 @@ class ScheduleController:
                                     attachments=attachments[1])
         
 
-    def send_report_message(self, group_channel, users):
+    def send_no_answer_report(self, group_channel, users, work_group):
         # get reports from data base
         # TODO check if report empty or not
         # TODO add message to report message
         # if empty send no answer
+        work_group = WorkGroup(DBController.get_group({'channel':group_channel}))
         report_message = "No answer"
         for user in users:
-            if self.reports_is_empty():
+            if work_group.reports.get(user):
                 self.slack_client.api_call("chat.postMessage", 
                                             channel=group_channel, 
                                             text=report_message)
 
         
-    def send_reminder_messages(self, im_channels):
+    def send_reminder_messages(self, group_channel, im_channels):
         reminder_message = "There's one hour left until the end of the StandUp."
-        
+        # need actual info
+        work_group = WorkGroup(DBController.get_group({'channel':group_channel}))
         for im_channel in im_channels:
             # if report is empty
             # TODO check empty
-            if self.reports_is_empty():
-                self.slack_client.api_call("chat.postMessage", 
-                                                channel=im_channel, 
-                                                text=reminder_message)
-
-    # depends on data view
-    def reports_is_empty(self):
-    # do smth
-        return True
-
+            # user is 
+            #if work_group.reports.get(user):
+            self.slack_client.api_call("chat.postMessage", 
+                                            channel=im_channel, 
+                                            text=reminder_message)
 
     def stop_all(self):
         schedule.clear()

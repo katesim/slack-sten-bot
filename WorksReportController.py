@@ -6,24 +6,24 @@ from pprint import pprint
 class Report:
     def __init__(self, user_id: str):
         self.user_id = user_id
-        self.cells = []
+        self.report = {self.user_id: []}
+
 
     def add_answer(self, cell: namedtuple('Cell', 'question answer ts_answer')):
-        self.cells.append(cell)
+        self.report[self.user_id].append(cell)
 
     def serialize(self):
-        return {'id_user': self.user_id,
-                'answers': self.cells}
+        return self.report
 
     def __getitem__(self, index):
-        return self.cells[index]
+        return self.report[self.user_id][index]
 
     def __len__(self):
-        return len(self.cells)
+        return len(self.report[self.user_id])
 
     def __str__(self):
         res = ''
-        for text in ["*" + a.question + "* \n " + a.answer + "\n" for a in self.cells]:
+        for text in ["*" + a.question + "* \n " + a.answer + "\n" for a in self.report[self.user_id]]:
             res += text
         return res
 
@@ -119,6 +119,6 @@ if __name__ == '__main__':
     report.add_answer(Cell('What are you planning do today?', 'rest', ts))
     report.add_answer(Cell('Any problem?', 'No', ts))
 
-    print('first answer:', report.cells[0].answer)
+    #print('first answer:', report.cells[0].answer)
     print('reports:')
     pprint(report.serialize())
