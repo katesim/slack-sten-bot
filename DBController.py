@@ -66,4 +66,4 @@ class DBController:
 if __name__ == '__main__':
     DBController.first_setup()
     DBController.add_group(group={})
-    pprint(DBController.get_group(0))
+    pprint(DBController.get_group({'serial_id':0}))

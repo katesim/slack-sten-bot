@@ -166,7 +166,7 @@ def _command_handler(channel, user, message):
             channel=str(YOUR_DIRECT_CHANNEL),
             users=[(YOUR_USER_ID, slack_client.api_call("im.open", user=YOUR_USER_ID)['channel'].get('id'))],
                    # User('UL4D3C0HG', slack_client.api_call("im.open", user='UL4D3C0HG')['channel'].get('id'))],
-            times='7:30'))
+            times={'0':'7:30'}))
 
         slack_client.api_call(
             "chat.postMessage",
