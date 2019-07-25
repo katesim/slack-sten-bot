@@ -17,6 +17,6 @@ class WorkGroup(object):
                     reports=self.reports,
                     ts_reports=self.ts_reports)
 
-    def update_reports(self, report, ts_reports):
-        self.reports.update(report)
+    def update_reports(self, reports, ts_reports):
+        self.reports.update(reports)
         self.ts_reports = ts_reports
