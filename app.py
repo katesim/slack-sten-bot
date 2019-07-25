@@ -1,5 +1,4 @@
 from flask import Flask, request, make_response, Response
-import requests
 import json
 import os
 from slackclient import SlackClient
@@ -7,7 +6,7 @@ from slackeventsapi import SlackEventAdapter
 import schedule
 import time
 from pprint import pprint
-import uuid
+from collections import namedtuple
 
 from WorksReportController import WorksReportController
 from InitController import InitController
@@ -82,7 +81,7 @@ def message_actions():
                 real_user_name=get_real_user_name(user),
                 ts_answer=time.time())
 
-            work_group = WorkGroup(DBController.get_group(0))
+            work_group = WorkGroup(DBController.get_group({'serial_id': 0}))
             work_group.update_reports(report=works_report_controller.report.serialize(),
                                       ts_reports=works_report_controller.ts_report)
 
@@ -161,11 +160,12 @@ def _command_handler(channel, user, message):
 
     if commands[1] in message_words:
         print(commands[1], message)
-
+        User = namedtuple('User', 'user_id im_channel')
         # TODO заполнить из странички-админки
         DBController.add_group(WorkGroup(dict(
             channel=str(YOUR_DIRECT_CHANNEL),
-            users=[str(YOUR_USER_ID)],
+            users=[User(YOUR_USER_ID, slack_client.api_call("im.open", user=YOUR_USER_ID)['channel'].get('id'))],
+                   # User('UHTUFSFN2', slack_client.api_call("im.open", user='UHTUFSFN2')['channel'].get('id'))],
             times='7:30')).serialize())
 
         slack_client.api_call(
@@ -235,7 +235,7 @@ def _message_handler(message_event):
                                                                   user_id=user,
                                                                   real_user_name=real_user_name,
                                                                   ts_answer=time.time())
-            work_group = WorkGroup(DBController.get_group(0))
+            work_group = WorkGroup(DBController.get_group({'serial_id': 0}))
             work_group.update_reports(report=works_report_controller.report.serialize(),
                                       ts_reports=works_report_controller.ts_report)
 
