@@ -1,4 +1,3 @@
-from DBController import DBController
 from collections import namedtuple
 
 User = namedtuple('User', 'user_id im_channel')
@@ -21,4 +20,3 @@ class WorkGroup(object):
     def update_reports(self, report, ts_reports):
         self.reports.update(report)
         self.ts_reports = ts_reports
-        DBController.update_reports(self.channel, self.reports, self.ts_reports)

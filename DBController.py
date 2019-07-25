@@ -3,6 +3,8 @@ from pymongo import MongoClient
 import uuid
 from pprint import pprint
 
+from WorkGroup import WorkGroup
+
 
 class DBController:
     mongo_client = MongoClient('mongo-db', 27017)
@@ -32,8 +34,8 @@ class DBController:
                               )
 
     @classmethod
-    def get_group(cls, filtered_field: dict) -> dict:
-        return cls.groups.find_one(filtered_field)
+    def get_group(cls, filtered_field: dict) -> WorkGroup:
+        return WorkGroup(cls.groups.find_one(filtered_field))
 
     @classmethod
     def get_all_groups(cls, filter_fields=None):
@@ -47,20 +49,21 @@ class DBController:
         cls.groups.remove(filter_fields)
 
     @classmethod
-    def update_reports(cls, channel, reports, ts_reports):
+    def update_reports(cls, work_group: WorkGroup):
         cls.groups.update_one(
             {
-            'channel': channel,
+                'channel': work_group.channel,
             },
             {'$set': {
-                'reports': reports,
-                'ts_reports': ts_reports
+                'reports': work_group.reports,
+                'ts_reports': work_group.ts_reports
             },
             }
         )
         print('UPD REPORTS IN DB')
 
+
 if __name__ == '__main__':
     DBController.first_setup()
     DBController.add_group(group={})
-    pprint(DBController.get_group({"serial_id":0}))
+    pprint(DBController.get_group({'serial_id':0}))
