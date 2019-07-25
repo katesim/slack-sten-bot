@@ -81,7 +81,7 @@ def message_actions():
                 ts_answer=time.time())
 
             work_group = DBController.get_group({'serial_id': 0})
-            work_group.update_reports(reports=works_report_controller.reports,
+            work_group.update_reports(report=works_report_controller.report.serialize(),
                                       ts_reports=works_report_controller.ts_report)
             DBController.update_reports(work_group)
 
@@ -225,7 +225,7 @@ def _message_handler(message_event):
                                                                   real_user_name=real_user_name,
                                                                   ts_answer=time.time())
             work_group = DBController.get_group({'serial_id': 0})
-            work_group.update_reports(reports=works_report_controller.reports,
+            work_group.update_reports(report=works_report_controller.report.serialize(),
                                       ts_reports=works_report_controller.ts_report)
             DBController.update_reports(work_group)
 
