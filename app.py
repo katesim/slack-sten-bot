@@ -1,5 +1,4 @@
 from flask import Flask, request, make_response, Response
-import requests
 import json
 import os
 from slackclient import SlackClient
@@ -7,7 +6,7 @@ from slackeventsapi import SlackEventAdapter
 import schedule
 import time
 from pprint import pprint
-import uuid
+from collections import namedtuple
 
 from WorksReportController import WorksReportController
 from InitController import InitController
@@ -161,11 +160,12 @@ def _command_handler(channel, user, message):
 
     if commands[1] in message_words:
         print(commands[1], message)
-
+        User = namedtuple('User', 'user_id im_channel')
         # TODO заполнить из странички-админки
         DBController.add_group(WorkGroup(dict(
             channel=str(YOUR_DIRECT_CHANNEL),
-            users=[str(YOUR_USER_ID)],
+            users=[User(YOUR_USER_ID, slack_client.api_call("im.open", user=YOUR_USER_ID)['channel'].get('id'))],
+                   # User('UHTUFSFN2', slack_client.api_call("im.open", user='UHTUFSFN2')['channel'].get('id'))],
             times='7:30')).serialize())
 
         slack_client.api_call(
