@@ -186,6 +186,7 @@ def _command_handler(channel, user, message):
     if commands[2] in message_words:
         print(commands[2], message)
         print('SCHEDULE START')
+        # TODO take group channel
         schedule_controller.schedule_StandUp(None)
         return True
 
