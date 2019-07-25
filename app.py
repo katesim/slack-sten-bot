@@ -232,19 +232,32 @@ def _message_handler(message_event):
 
             if works_report_controller.is_finished:
                 output_channel = "CL67NCJ0J"
-            else:
-                output_channel = YOUR_DIRECT_CHANNEL #work_group.channel
-            slack_client.api_call("chat.postMessage",
-                                  channel=output_channel,  # TODO отправлять в тред РГ
+                # temporary for test # TODO move to schedule ts save
+                # save ts into workgroup db? think about it
+                ts = get_update_ts(output_channel)
+                slack_client.api_call("chat.postMessage",
+                                  channel=output_channel,  # TODO отправлять в тред РГ work_group.channel
                                   text=attachments[0],
-                                  attachments=attachments[1])
+                                  attachments=attachments[1],
+                                  thread_ts = ts)
+            
+            else:
+                output_channel = channel 
+                slack_client.api_call("chat.postMessage",
+                                    channel=output_channel,  # im channel
+                                    text=attachments[0],
+                                    attachments=attachments[1])
     return make_response("Message Sent", 200, )
 
-    # ============= Event Type Not Found! ============= #
-    # If the event_type does not have a handler
-    # message = "You have not added an event handler for the %s" % event_type
-    # Return a helpful error message
-    #return make_response(message, 200, {"X-Slack-No-Retry": 1})
+def get_update_ts(output_channel):
+    response = slack_client.api_call("chat.postMessage",
+                                channel = output_channel,
+                                text = "Update for {} WorkGroup".format(output_channel))
+
+    print("RESPONSE")
+    pprint(response)
+    ts = response["message"]["ts"]
+    return ts
 
 def get_real_user_name(user_id):
     user_info = slack_client.api_call("users.info", user=user_id)
