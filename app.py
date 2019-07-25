@@ -164,7 +164,7 @@ def _command_handler(channel, user, message):
         # TODO заполнить из странички-админки
         DBController.add_group(dict(
             channel=str(YOUR_DIRECT_CHANNEL),
-            users=[User(YOUR_USER_ID, slack_client.api_call("im.open", user=YOUR_USER_ID)['channel'].get('id'))],
+            users=[(YOUR_USER_ID, slack_client.api_call("im.open", user=YOUR_USER_ID)['channel'].get('id'))],
                    # User('UL4D3C0HG', slack_client.api_call("im.open", user='UL4D3C0HG')['channel'].get('id'))],
             times='7:30'))
 
