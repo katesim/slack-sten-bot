@@ -92,7 +92,7 @@ def message_actions():
                 text="Your answer is {}  :coffee:".format(short_answer),
                 attachments=[]  # empty `attachments` to clear the existing massage attachments
             )
-
+            print("IM HERE")
             slack_client.api_call("chat.postMessage",
                                   channel=work_group.channel,  # TODO отправлять в тред РГ
                                   text=attachments[0],
@@ -153,6 +153,7 @@ def _command_handler(channel, user, message):
         attachments = works_report_controller.answer_menu(works_report_controller.questions[0])
 
         im_channel = slack_client.api_call("im.open", user=user)['channel'].get('id')
+        print("POST FIRST MESSAGE")
         slack_client.api_call("chat.postMessage",
                               channel=im_channel,
                               text=attachments[0],
@@ -229,8 +230,12 @@ def _message_handler(message_event):
                                       ts_reports=works_report_controller.ts_report)
             DBController.update_reports(work_group)
 
+            if works_report_controller.is_finished:
+                output_channel = "CL67NCJ0J"
+            else:
+                output_channel = YOUR_DIRECT_CHANNEL #work_group.channel
             slack_client.api_call("chat.postMessage",
-                                  channel=work_group.channel,  # TODO отправлять в тред РГ
+                                  channel=output_channel,  # TODO отправлять в тред РГ
                                   text=attachments[0],
                                   attachments=attachments[1])
     return make_response("Message Sent", 200, )

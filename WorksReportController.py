@@ -45,6 +45,7 @@ class WorksReportController:
         self.question_counter = 0
         self.real_name_user = None
         self.Cell = namedtuple('Cell', 'question answer ts_answer')
+        self.is_finished = False
 
     def take_short_answer(self, selection=str):
         for answer in self.short_answers:
@@ -68,12 +69,18 @@ class WorksReportController:
 
         if answer in [short_answer[1] for short_answer in self.short_answers]:
             self.question_counter = 0
+            
+            self.real_name_user = real_user_name
+            self.is_finished = True
             return self.create_report(real_user_name)
 
         try:
             return self.answer_menu(question=self.questions[self.question_counter])
         except:
             self.question_counter = 0
+            
+            self.real_name_user = real_user_name
+            self.is_finished = True
             return self.create_report(real_user_name)
 
     def answer_menu(self, question="What did you do yesterday? :coffee:"):
