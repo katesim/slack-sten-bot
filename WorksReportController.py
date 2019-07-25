@@ -84,7 +84,8 @@ class WorksReportController:
         res = ''
         for text in ["*" + a.question + "* \n " + a.answer + "\n" for a in self.reports[user_id]]:
             res += text
-
+        del self.reports[user_id]
+        
         return ('New report', [
             {
                 "fallback": "Upgrade your Slack client to use messages like these.",
