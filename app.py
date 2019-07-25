@@ -163,12 +163,11 @@ def _command_handler(channel, user, message):
 
     if commands[1] in message_words:
         print(commands[1], message)
-        User = namedtuple('User', 'user_id im_channel')
         # TODO заполнить из странички-админки
         DBController.add_group(WorkGroup(dict(
             channel=str(YOUR_DIRECT_CHANNEL),
-            users=[User(YOUR_USER_ID, slack_client.api_call("im.open", user=YOUR_USER_ID)['channel'].get('id'))],
-            times={1:'7:30'})).serialize())
+            users=[(YOUR_USER_ID, slack_client.api_call("im.open", user=YOUR_USER_ID)['channel'].get('id'))],
+            times={'0':'7:30'})).serialize())
 
         slack_client.api_call(
             "chat.postMessage",
@@ -186,7 +185,7 @@ def _command_handler(channel, user, message):
         print(commands[2], message)
         print('SCHEDULE START')
         # TODO take group channel
-        schedule_controller.schedule_StandUp(None)
+        schedule_controller.schedule_StandUp(YOUR_DIRECT_CHANNEL)
         return True
 
     if commands[3] in message_words:

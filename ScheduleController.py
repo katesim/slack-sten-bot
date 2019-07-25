@@ -29,10 +29,11 @@ class ScheduleController:
         # add reminder for every report day
         for weekday in times.keys():
             # calculate time for reminder
-            time, weekday = self.plus_hours(times[weekday], weekday, hour_shift=1)
+            time, weekday = self.plus_hours(times[weekday], int(weekday), hour_shift=1)
+            #weekday=1
             time = self.formatted_time(time)
             print("ADD SCHEDULE REMINDER JOB FOR DAY", weekday)
-            self.add_scheduled_job(time, weekday, self.send_reminder_messages, group_channel, users)
+            self.add_scheduled_job(time, int(weekday), self.send_reminder_messages, group_channel, users)
 
     def send_reminder_messages(self, group_channel, users):
         reminder_message = "There's one hour left until the end of the StandUp."
@@ -51,10 +52,11 @@ class ScheduleController:
         print("FORM REPORT")
         # add report into group channel gor every report day
         for weekday in times.keys():
-            time, weekday = self.plus_hours(times[weekday], weekday, hour_shift=3)
+            time, weekday = self.plus_hours(times[weekday], int(weekday), hour_shift=3)
+            #weekday=2
             time = self.formatted_time(time)
             print("ADD SCHEDULE REPORT JOB FOR DAY", weekday)
-            self.add_scheduled_job(time, weekday, self.send_no_answer_report, group_channel, users)
+            self.add_scheduled_job(time, int(weekday), self.send_no_answer_report, group_channel, users)
 
     def send_no_answer_report(self, group_channel, users):
         
@@ -64,7 +66,7 @@ class ScheduleController:
         reports = work_group.reports
         
         for user in users:
-            if reports.get(user.user_id):
+            if not reports.get(user.user_id):
                 # TODO thread report message 
                 self.slack_client.api_call("chat.postMessage", 
                                             channel=group_channel, 
@@ -77,12 +79,13 @@ class ScheduleController:
         for weekday in times.keys():
             time = self.formatted_time(times[weekday])
             print("ADD SCHEDULE QUESTIONNARE JOB FOR DAY", weekday)
-            self.add_scheduled_job(time, weekday, self.send_question_messages, users)
+            self.add_scheduled_job(time, int(weekday), self.send_question_messages, users)
 
     def send_question_messages(self, users):
 
         attachments = self.works_report_controller.answer_menu(self.works_report_controller.questions[0])
         for user in users:
+            print("USER", user)
             print("SEND QUESTION MESSAGE FOR MEMBER", user.user_id)
                 
             # works_report_controller = WorksReportController()
@@ -140,9 +143,9 @@ class ScheduleController:
         assert 0 <= day < 7, "invalid day value"
         # Now monday day for tests
         {
-            0: lambda job, *args: schedule.every(5).seconds.do(job, *args), #schedule.every().monday.at(time).do(job, *args)
-            1: lambda job, *args: schedule.every().tuesday.at(time).do(job,*args), 
-            2: lambda job, *args: schedule.every().wednesday.at(time).do(job,*args), 
+            0: lambda job, *args: schedule.every(15).seconds.do(job, *args), # schedule.every().monday.at(time).do(job, *args)
+            1: lambda job, *args: schedule.every().tuesday.at(time).do(job,*args), # schedule.every(20).seconds.do(job, *args), #
+            2: lambda job, *args: schedule.every().wednesday.at(time).do(job,*args), # schedule.every(25).seconds.do(job, *args),
             3: lambda job, *args: schedule.every().thursday.at(time).do(job,*args),
             4: lambda job, *args: schedule.every().friday.at(time).do(job,*args), 
             5: lambda job, *args: schedule.every().saturday.at(time).do(job,*args), 
