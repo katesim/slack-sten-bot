@@ -82,7 +82,7 @@ def message_actions():
                 ts_answer=time.time())
 
             work_group = DBController.get_group({'serial_id': 0})
-            work_group.update_reports(report=works_report_controller.report.serialize(),
+            work_group.update_reports(reports=works_report_controller.reports,
                                       ts_reports=works_report_controller.ts_report)
             DBController.update_reports(work_group)
 
@@ -99,6 +99,7 @@ def message_actions():
                                   text=attachments[0],
                                   attachments=attachments[1],
                                   thread_ts=works_report_controller.ts_thread)
+            works_report_controller.forgot_old_report(user)
 
             # Send an HTTP 200 response with empty body so Slack knows we're done here
             return make_response("", 200)
@@ -161,12 +162,12 @@ def _command_handler(channel, user, message):
 
         attachments = works_report_controller.answer_menu(works_report_controller.questions[0])
 
-        im_channel = slack_client.api_call("im.open", user=user)['channel'].get('id')
-        print("POST FIRST MESSAGE")
-        slack_client.api_call("chat.postMessage",
-                              channel=im_channel,
-                              text=attachments[0],
-                              attachments=attachments[1])
+        work_group = DBController.get_group({'serial_id': 0})
+        for u in work_group.users:
+            slack_client.api_call("chat.postMessage",
+                                  channel=u[1],
+                                  text=attachments[0],
+                                  attachments=attachments[1])
         return True
 
     if commands[1] in message_words:
@@ -175,8 +176,8 @@ def _command_handler(channel, user, message):
         DBController.add_group(dict(
             channel=str(YOUR_DIRECT_CHANNEL),
             users=[(YOUR_USER_ID, slack_client.api_call("im.open", user=YOUR_USER_ID)['channel'].get('id'))],
-                   # User('UL4D3C0HG', slack_client.api_call("im.open", user='UL4D3C0HG')['channel'].get('id'))],
-            times={'0':'7:30'}))
+            # ('UL4D3C0HG', slack_client.api_call("im.open", user='UL4D3C0HG')['channel'].get('id'))],
+            times={'0': '7:30'}))
 
         slack_client.api_call(
             "chat.postMessage",
@@ -235,25 +236,21 @@ def _message_handler(message_event):
                                                                   real_user_name=real_user_name,
                                                                   ts_answer=time.time())
             work_group = DBController.get_group({'serial_id': 0})
-            work_group.update_reports(report=works_report_controller.report.serialize(),
+            print("WORK CONTROLLER REPORTS", works_report_controller.reports)
+            work_group.update_reports(reports=works_report_controller.reports,
                                       ts_reports=works_report_controller.ts_report)
             DBController.update_reports(work_group)
-
-            if works_report_controller.is_finished:
+            if 'New report' == attachments[0]:
                 output_channel = "CL67NCJ0J"
-                # temporary for test # TODO move to schedule ts save
-                # save ts into workgroup db? think about it
-                #ts = work_group.ts_reports
                 slack_client.api_call("chat.postMessage",
                                   channel=output_channel,  # TODO отправлять в тред РГ work_group.channel
                                   text=attachments[0],
                                   attachments=attachments[1],
                                   thread_ts = works_report_controller.ts_thread)
-            
+                works_report_controller.forgot_old_report(user)
             else:
-                output_channel = channel 
                 slack_client.api_call("chat.postMessage",
-                                    channel=output_channel,  # im channel
+                                      channel=channel,  # отправлять следующий вопрос
                                     text=attachments[0],
                                     attachments=attachments[1])
     return make_response("Message Sent", 200, )
