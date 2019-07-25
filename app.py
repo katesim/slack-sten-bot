@@ -1,5 +1,4 @@
 from flask import Flask, request, make_response, Response
-import requests
 import json
 import os
 from slackclient import SlackClient
