@@ -93,7 +93,6 @@ def message_actions():
                 text="Your answer is {}  :coffee:".format(short_answer),
                 attachments=[]  # empty `attachments` to clear the existing massage attachments
             )
-            print("!!!!!!!!!!!!!!!!!!!!!!!!!!TS SHORT ANSWER", works_report_controller.ts_thread)
             slack_client.api_call("chat.postMessage",
                                   channel= "CL67NCJ0J",#work_group.channel,  # TODO отправлять в тред РГ
                                   text=attachments[0],
@@ -152,17 +151,17 @@ def _command_handler(channel, user, message):
                               text="command q")
 
         # ================================================
-        ts = set_report_ts("CL67NCJ0J")
-        #work_group = DBController.get_group({'serial_id': 0})
+        work_group = DBController.get_group({'serial_id': 0})
+        ts = set_report_ts(work_group.channel)
+        
         #work_group.ts_reports = ts
         #DBController.update_reports(work_group)
         works_report_controller.ts_thread = ts
         # works_report_controller = WorksReportController()
-        print("ST THREAD FOR Q")
 
         attachments = works_report_controller.answer_menu(works_report_controller.questions[0])
 
-        work_group = DBController.get_group({'serial_id': 0})
+        #work_group = DBController.get_group({'serial_id': 0})
         for u in work_group.users:
             slack_client.api_call("chat.postMessage",
                                   channel=u[1],
@@ -174,9 +173,9 @@ def _command_handler(channel, user, message):
         print(commands[1], message)
         # TODO заполнить из странички-админки
         DBController.add_group(dict(
-            channel=str(YOUR_DIRECT_CHANNEL),
-            users=[(YOUR_USER_ID, slack_client.api_call("im.open", user=YOUR_USER_ID)['channel'].get('id'))],
-            # ('UL4D3C0HG', slack_client.api_call("im.open", user='UL4D3C0HG')['channel'].get('id'))],
+            channel="CL67NCJ0J", # test channel
+            users=[('UL4D3C0HG', slack_client.api_call("im.open", user='UL4D3C0HG')['channel'].get('id')),
+             ('UHTJL2NKZ', slack_client.api_call("im.open", user='UHTJL2NKZ')['channel'].get('id'))],
             times={'0': '7:30'}))
 
         slack_client.api_call(
@@ -195,7 +194,8 @@ def _command_handler(channel, user, message):
         print(commands[2], message)
         print('SCHEDULE START')
         # TODO take group channel
-        schedule_controller.schedule_StandUp(YOUR_DIRECT_CHANNEL)
+        work_group = DBController.get_group({'serial_id': 0})
+        schedule_controller.schedule_StandUp(group_channel=work_group.channel)
         return True
 
     if commands[3] in message_words:
@@ -236,21 +236,20 @@ def _message_handler(message_event):
                                                                   real_user_name=real_user_name,
                                                                   ts_answer=time.time())
             work_group = DBController.get_group({'serial_id': 0})
-            print("WORK CONTROLLER REPORTS", works_report_controller.reports)
+            #print("WORK CONTROLLER REPORTS", works_report_controller.reports)
             work_group.update_reports(reports=works_report_controller.reports,
                                       ts_reports=works_report_controller.ts_report)
             DBController.update_reports(work_group)
             if 'New report' == attachments[0]:
-                output_channel = "CL67NCJ0J"
                 slack_client.api_call("chat.postMessage",
-                                  channel=output_channel,  # TODO отправлять в тред РГ work_group.channel
+                                  channel=work_group.channel,
                                   text=attachments[0],
                                   attachments=attachments[1],
                                   thread_ts = works_report_controller.ts_thread)
                 works_report_controller.forgot_old_report(user)
             else:
                 slack_client.api_call("chat.postMessage",
-                                      channel=channel,  # отправлять следующий вопрос
+                                    channel=channel,  # отправлять следующий вопрос в личку
                                     text=attachments[0],
                                     attachments=attachments[1])
     return make_response("Message Sent", 200, )
@@ -259,9 +258,6 @@ def set_report_ts(output_channel):
     response = slack_client.api_call("chat.postMessage",
                                 channel = output_channel,
                                 text = "Update for {} WorkGroup".format(output_channel))
-
-    print("RESPONSE")
-    pprint(response)
     ts = response["message"]["ts"]
     return ts
 
