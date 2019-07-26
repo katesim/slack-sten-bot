@@ -81,8 +81,13 @@ def message_actions():
                 ts_answer=time.time())
 
             work_group = DBController.get_group({'serial_id': 0})
-            work_group.update_reports(reports=works_report_controller.reports,
-                                      ts_reports=works_report_controller.ts_report)
+            # print("WORK GROUP SHORT OLD")
+            # pprint(work_group.reports)
+            work_group.update_reports(reports=works_report_controller.reports)
+
+            work_group.update_ts(ts_reports=works_report_controller.ts_report)
+            # print("WORK GROUP SHORT NEW")
+            # pprint(work_group.reports)
             DBController.update_reports(work_group)
 
             slack_client.api_call(
@@ -97,7 +102,7 @@ def message_actions():
                                   channel=work_group.channel,  # TODO отправлять в тред РГ
                                   text=attachments[0],
                                   attachments=attachments[1])
-            works_report_controller.forgot_old_report(user)
+            #works_report_controller.forgot_old_report(user)
 
             # Send an HTTP 200 response with empty body so Slack knows we're done here
             return make_response("", 200)
@@ -152,11 +157,19 @@ def _command_handler(channel, user, message):
         # works_report_controller = WorksReportController()
 
         attachments = works_report_controller.answer_menu(works_report_controller.questions[0])
-
+        # delete all reports from db and from work controller before first question
         work_group = DBController.get_group({'serial_id': 0})
+        work_group.clean_reports()
+        # print("REMOVE WG ")
+        # pprint(work_group.reports)
+        DBController.update_reports(work_group)
+        work_group = DBController.get_group({'serial_id': 0})
+        # print("WORK GROUP CLEAN IN DB")
+        # pprint(work_group.reports)
+        works_report_controller.clean_reports()
         for u in work_group.users:
             slack_client.api_call("chat.postMessage",
-                                  channel=u[1],
+                                  channel=u.im_channel,
                                   text=attachments[0],
                                   attachments=attachments[1])
         return True
@@ -166,8 +179,8 @@ def _command_handler(channel, user, message):
         # TODO заполнить из странички-админки
         DBController.add_group(dict(
             channel=str(YOUR_DIRECT_CHANNEL),
-            users=[(YOUR_USER_ID, slack_client.api_call("im.open", user=YOUR_USER_ID)['channel'].get('id'))],
-            # ('UL4D3C0HG', slack_client.api_call("im.open", user='UL4D3C0HG')['channel'].get('id'))],
+            users=[(YOUR_USER_ID, slack_client.api_call("im.open", user=YOUR_USER_ID)['channel'].get('id')),
+            ('UHTJL2NKZ', slack_client.api_call("im.open", user='UHTJL2NKZ')['channel'].get('id'))],
             times={'0': '7:30'}))
 
         slack_client.api_call(
@@ -212,31 +225,39 @@ def _message_handler(message_event):
 
     if subtype == 'message_changed':
         if message_before_change in WorksReportController().questions:
-            print('USER SELECTED SHORT ANSWER: ', message)
+            print("USER SELECTED SHORT ANSWER")
 
     if user:
         real_user_name = get_real_user_name(user)
-
+        print("USER ID", user)
         # предыдущее вопрос?
         current_message, previous_message = _take_answer(message_event)
-        print('current_message, previous_message', current_message, previous_message)
+        #print('current_message, previous_message', current_message, previous_message)
         if previous_message in WorksReportController().questions:
+            print("BEFORE REMEMBER ANSWER")
+            pprint(works_report_controller.reports)
             attachments = works_report_controller.remember_answer(answer=current_message,
                                                                   question=previous_message,
                                                                   user_id=user,
                                                                   real_user_name=real_user_name,
                                                                   ts_answer=time.time())
+            # print("AFTER REMEMBER ANSWER")
+            # pprint(works_report_controller.reports)
             work_group = DBController.get_group({'serial_id': 0})
-            print("WORK CONTROLLER REPORTS", works_report_controller.reports)
-            work_group.update_reports(reports=works_report_controller.reports,
-                                      ts_reports=works_report_controller.ts_report)
+            # print("WORK GROUP REPORTS OLD")
+            # pprint(work_group.reports)
+            work_group.update_reports(reports=works_report_controller.reports)
+            work_group.update_ts(ts_reports=works_report_controller.ts_report)
+            # print("WORK GROUP REPORTS NEW")
+            # pprint(work_group.reports)
+
             DBController.update_reports(work_group)
             if 'New report' == attachments[0]:
                 slack_client.api_call("chat.postMessage",
                                       channel=work_group.channel,  # TODO отправлять в тред РГ
                                       text=attachments[0],
                                       attachments=attachments[1])
-                works_report_controller.forgot_old_report(user)
+                #works_report_controller.forgot_old_report(user)
             else:
                 slack_client.api_call("chat.postMessage",
                                       channel=channel,  # отправлять следующий вопрос
@@ -292,11 +313,6 @@ def app_mention(event):
     print("\n")
     channel = event["event"]["channel"]
     _first_message(channel)
-    # slack_client.api_call("chat.postMessage",
-    #             channel = channel,
-    #             text="Привет, я StenBot!\n" +\
-    #                  "Напиши мне, чтобы создать опрос\n")
-
 
 # process direct bot message
 @slack_events_adapter.on('message')
@@ -306,7 +322,7 @@ def message(event):
     channel_type = message_event.get("channel_type")
     subtype = message_event.get("subtype")
 
-    pprint(event)
+    #pprint(event)
     print("\n")
     # ============= MESSAGE FROM USER ============= #
     if subtype == None:#!= "bot_message":

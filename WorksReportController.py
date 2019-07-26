@@ -33,6 +33,9 @@ class WorksReportController:
         self.real_name_user = None
         self.Cell = namedtuple('Cell', 'question answer ts_answer')
 
+    def clean_reports(self):
+        self.reports = {}
+
     def take_short_answer(self, selection=str):
         for answer in self.short_answers:
             if selection == answer[0]:
