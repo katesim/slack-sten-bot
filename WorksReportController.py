@@ -51,11 +51,24 @@ class WorksReportController:
         return menu_options
 
     def remember_answer(self, question, answer, user_id, real_user_name, ts_answer):
+        # print("IN REMEMBER ANSWEER")
+        # pprint(self.reports)
+        # print("USER ID", user_id)
         self.reports.update(Report(user_id=user_id))
+        # print("IN REMEMBER ANSWEER UPDATED")
+        # pprint(self.reports)
+        # print("USER ID", user_id)
         if not self.reports.get(user_id):
             self.reports[user_id] = [self.Cell(question, answer, ts_answer)]
         else:
-            self.reports[user_id].append(self.Cell(question, answer, ts_answer))
+            asked_questions = [cell[0][0] for cell in self.reports[user_id]]
+            # print("QUESTION", question)
+            # print("ASKED QUESTIONS", asked_questions)
+            if question not in asked_questions:
+                self.reports[user_id].append(self.Cell(question, answer, ts_answer))
+        # print("IN REMEMBER ANSWEER  APPEND")
+        # pprint(self.reports)  
+
         self.ts_report = None
 
         if answer in [short_answer[1] for short_answer in self.short_answers]:

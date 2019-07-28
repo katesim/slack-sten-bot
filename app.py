@@ -85,11 +85,10 @@ def message_actions():
             # print("WORK GROUP SHORT OLD")
             # pprint(work_group.reports)
             work_group.update_reports(reports=works_report_controller.reports)
-
-            work_group.update_ts(ts_reports=works_report_controller.ts_report)
+            DBController.update_reports(work_group)
+            #work_group.update_ts(ts_reports=works_report_controller.ts_report)
             # print("WORK GROUP SHORT NEW")
             # pprint(work_group.reports)
-            DBController.update_reports(work_group)
 
             slack_client.api_call(
                 "chat.update",
@@ -102,7 +101,7 @@ def message_actions():
                                   channel= "CL67NCJ0J",#work_group.channel,  # TODO отправлять в тред РГ
                                   text=attachments[0],
                                   attachments=attachments[1],
-                                  thread_ts=works_report_controller.ts_thread)
+                                  thread_ts=work_group.ts_reports)
             #works_report_controller.forgot_old_report(user)
 
             # Send an HTTP 200 response with empty body so Slack knows we're done here
@@ -157,17 +156,18 @@ def _command_handler(channel, user, message):
 
         # ================================================
         work_group = DBController.get_group({'serial_id': 0})
-        ts = set_report_ts(work_group.channel)
+        
         
         #work_group.ts_reports = ts
         #DBController.update_reports(work_group)
-        works_report_controller.ts_thread = ts
+        #works_report_controller.ts_thread = ts
         # works_report_controller = WorksReportController()
 
         attachments = works_report_controller.answer_menu(works_report_controller.questions[0])
         # delete all reports from db and from work controller before first question
         work_group = DBController.get_group({'serial_id': 0})
         work_group.clean_reports()
+        work_group.update_ts(set_report_ts(work_group.channel))
         # print("REMOVE WG ")
         # pprint(work_group.reports)
         DBController.update_reports(work_group)
@@ -187,8 +187,8 @@ def _command_handler(channel, user, message):
         # TODO заполнить из странички-админки
         DBController.add_group(dict(
             channel="CL67NCJ0J", # test channel
-            users=[('UL4D3C0HG', slack_client.api_call("im.open", user='UL4D3C0HG')['channel'].get('id')),
-             ('UHTJL2NKZ', slack_client.api_call("im.open", user='UHTJL2NKZ')['channel'].get('id'))],
+            users=[('UL4D3C0HG', slack_client.api_call("im.open", user='UL4D3C0HG')['channel'].get('id'))],
+             #('UHTJL2NKZ', slack_client.api_call("im.open", user='UHTJL2NKZ')['channel'].get('id'))],
             times={'0': '7:30'}))
 
         slack_client.api_call(
@@ -256,16 +256,15 @@ def _message_handler(message_event):
             # print("WORK GROUP REPORTS OLD")
             # pprint(work_group.reports)
             work_group.update_reports(reports=works_report_controller.reports)
+            DBController.update_reports(work_group)
             # print("WORK GROUP REPORTS NEW")
             # pprint(work_group.reports)
-
-            DBController.update_reports(work_group)
             if 'New report' == attachments[0]:
                 slack_client.api_call("chat.postMessage",
                                   channel=work_group.channel,
                                   text=attachments[0],
                                   attachments=attachments[1],
-                                  thread_ts = works_report_controller.ts_thread)
+                                  thread_ts = work_group.ts_reports)
                 #works_report_controller.forgot_old_report(user)
             else:
                 slack_client.api_call("chat.postMessage",
@@ -331,6 +330,8 @@ def message(event):
     message_event = event["event"]
     channel_type = message_event.get("channel_type")
     subtype = message_event.get("subtype")
+
+    print("SUBTYPE", subtype)
 
     #pprint(event)
     print("\n")
