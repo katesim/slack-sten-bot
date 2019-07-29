@@ -17,6 +17,11 @@ class WorkGroup(object):
                     reports=self.reports,
                     ts_reports=self.ts_reports)
 
-    def update_reports(self, reports, ts_reports):
+    def update_reports(self, reports):
         self.reports.update(reports)
+
+    def clean_reports(self):
+        self.reports = {}
+
+    def update_ts(self, ts_reports):
         self.ts_reports = ts_reports
