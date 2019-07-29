@@ -143,6 +143,26 @@ def get_menu_answers(submission):
     print("TIME:", time, "CHANNEL:", group_channel)
     return time, group_channel
 
+def start_questionnaire(work_group_id=0):
+    global works_report_controller
+    attachments = works_report_controller.answer_menu(works_report_controller.questions[0])
+
+    # delete all reports from db and from work controller before first question
+    work_group = DBController.get_group({'serial_id': work_group_id})
+    work_group.clean_reports()
+    work_group.update_ts(set_report_ts(work_group.channel))
+    # print("REMOVE WG ")
+    # pprint(work_group.reports)
+    DBController.update_reports(work_group)
+
+    works_report_controller.clean_reports()
+    for u in work_group.users:
+        slack_client.api_call("chat.postMessage",
+                                channel=u.im_channel,
+                                text=attachments[0],
+                                attachments=attachments[1])
+
+
 def _command_handler(channel, user, message):
     global works_report_controller
     global schedule_controller
@@ -153,33 +173,8 @@ def _command_handler(channel, user, message):
         slack_client.api_call("chat.postMessage",
                               channel=channel,
                               text="command q")
-
-        # ================================================
-        work_group = DBController.get_group({'serial_id': 0})
+        start_questionnaire()
         
-        
-        #work_group.ts_reports = ts
-        #DBController.update_reports(work_group)
-        #works_report_controller.ts_thread = ts
-        # works_report_controller = WorksReportController()
-
-        attachments = works_report_controller.answer_menu(works_report_controller.questions[0])
-        # delete all reports from db and from work controller before first question
-        work_group = DBController.get_group({'serial_id': 0})
-        work_group.clean_reports()
-        work_group.update_ts(set_report_ts(work_group.channel))
-        # print("REMOVE WG ")
-        # pprint(work_group.reports)
-        DBController.update_reports(work_group)
-        work_group = DBController.get_group({'serial_id': 0})
-        # print("WORK GROUP CLEAN IN DB")
-        # pprint(work_group.reports)
-        works_report_controller.clean_reports()
-        for u in work_group.users:
-            slack_client.api_call("chat.postMessage",
-                                  channel=u.im_channel,
-                                  text=attachments[0],
-                                  attachments=attachments[1])
         return True
 
     if commands[1] in message_words:
@@ -201,6 +196,9 @@ def _command_handler(channel, user, message):
                               channel=channel,
                               text="Init new standUP",
                               attachments=[])
+        # INIT STANDUP SCHEDULE FOR WORKGROUP
+        work_group = DBController.get_group({'serial_id': 0})
+        schedule_controller.schedule_StandUp(group_channel=work_group.channel)
         return True
 
     if commands[2] in message_words:

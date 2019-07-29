@@ -79,11 +79,18 @@ class ScheduleController:
         for weekday in times.keys():
             time = self.formatted_time(times[weekday])
             print("ADD SCHEDULE QUESTIONNARE JOB FOR DAY", weekday)
-            self.add_scheduled_job(time, int(weekday), self.send_question_messages, users)
+            self.add_scheduled_job(time, int(weekday), self.send_question_messages, group_channel, users)
 
-    def send_question_messages(self, users):
+    def send_question_messages(self, group_channel, users):
 
         attachments = self.works_report_controller.answer_menu(self.works_report_controller.questions[0])
+        # delete all reports from db and from work controller before first question
+        work_group = DBController.get_group({'channel':group_channel})
+        work_group.clean_reports()
+        work_group.update_ts(self.set_report_ts(work_group.channel))
+        DBController.update_reports(work_group)
+        self.works_report_controller.clean_reports()
+
         for user in users:
             print("USER", user)
             print("SEND QUESTION MESSAGE FOR MEMBER", user.user_id)
@@ -93,6 +100,13 @@ class ScheduleController:
                                     channel=user.im_channel,
                                     text=attachments[0],
                                     attachments=attachments[1])
+
+    def set_report_ts(self, output_channel):
+        response = self.slack_client.api_call("chat.postMessage",
+                                    channel = output_channel,
+                                    text = "Update for {} WorkGroup".format(output_channel))
+        ts = response["message"]["ts"]
+        return ts
 
     def stop_all(self):
         schedule.clear()
