@@ -183,7 +183,8 @@ def _command_handler(channel, user, message):
                 ('U6Z1LEQGG', slack_client.api_call("im.open", user='U6Z1LEQGG')['channel'].get('id')), # taden
                 ('UGT6C425U', slack_client.api_call("im.open", user='UGT6C425U')['channel'].get('id')), # toxic
                 ('UJU4M634Z', slack_client.api_call("im.open", user='UJU4M634Z')['channel'].get('id')), # grinch
-                ('UEG2QQRQC', slack_client.api_call("im.open", user='UEG2QQRQC')['channel'].get('id'))], # kvy
+                ('UEG2QQRQC', slack_client.api_call("im.open", user='UEG2QQRQC')['channel'].get('id')), # kvy
+                ('U4QQQHXU7', slack_client.api_call("im.open", user='U4QQQHXU7')['channel'].get('id'))], # kate.sim
                 times={'1': '10:00', '3':'10:00'}))
 
             slack_client.api_call(
