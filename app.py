@@ -178,13 +178,13 @@ def _command_handler(channel, user, message):
         if not DBController.get_group({'serial_id': 0}):
             # TODO заполнить из странички-админки
             DBController.add_group(dict(
-                channel="CL67NCJ0J", # test channel
-                # users=[('UL4D3C0HG', slack_client.api_call("im.open", user='UL4D3C0HG')['channel'].get('id')),
-                #  ('UHTJL2NKZ', slack_client.api_call("im.open", user='UHTJL2NKZ')['channel'].get('id'))],
-                # times={'1': '10:00', "3":"10:00"}))
-                users=[('UL4D3C0HG', slack_client.api_call("im.open", user='UL4D3C0HG')['channel'].get('id')),
-                ('UHTJL2NKZ', slack_client.api_call("im.open", user='UHTJL2NKZ')['channel'].get('id'))],
-                times={'0': '17:00'}))
+                channel="CL8TPBRHT", # artlife channel
+                users=[('UFL6YKF6J', slack_client.api_call("im.open", user='UFL6YKF6J')['channel'].get('id')), # arapov
+                ('U6Z1LEQGG', slack_client.api_call("im.open", user='U6Z1LEQGG')['channel'].get('id')), # taden
+                ('UGT6C425U', slack_client.api_call("im.open", user='UGT6C425U')['channel'].get('id')), # toxic
+                ('UJU4M634Z', slack_client.api_call("im.open", user='UJU4M634Z')['channel'].get('id')), # grinch
+                ('UEG2QQRQC', slack_client.api_call("im.open", user='UEG2QQRQC')['channel'].get('id'))], # kvy
+                times={'1': '10:00', '3':'10:00'}))
 
             slack_client.api_call(
                 "chat.postMessage",
