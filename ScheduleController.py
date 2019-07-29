@@ -15,7 +15,7 @@ class ScheduleController:
 
     # activate schedule events for all StandUp activity for work group
     def schedule_StandUp(self, group_channel):
-        work_group = WorkGroup(DBController.get_group({'channel':group_channel}))
+        work_group = DBController.get_group({'channel':group_channel})
         users = work_group.users
         times = work_group.times
         self.schedule_group_questionnaire(group_channel, users, times)
@@ -66,10 +66,13 @@ class ScheduleController:
         reports = work_group.reports
         
         for user in users:
-            if not reports.get(user.user_id): 
+            if not reports.get(user.user_id):
+                real_user_name = self.get_real_user_name(user.user_id)
+                text, attachment = self.works_report_controller.create_report(real_user_name, user.user_id, report_message) 
                 self.slack_client.api_call("chat.postMessage", 
                                             channel=group_channel, 
-                                            text=report_message,
+                                            text=text,
+                                            attachments=attachment,
                                             thread_ts=work_group.ts_reports)
 
     def schedule_group_questionnaire(self, group_channel, users, times):
@@ -100,6 +103,14 @@ class ScheduleController:
                                     channel=user.im_channel,
                                     text=attachments[0],
                                     attachments=attachments[1])
+
+    def get_real_user_name(self, user_id):
+        user_info = self.slack_client.api_call("users.info", user=user_id)
+        real_user_name = "user"
+        if user_info.get("ok"):
+            real_user_name = user_info.get("user").get("real_name")
+            print('REAL NAME :', real_user_name, 'USER ID :', user_id)
+        return real_user_name
 
     def set_report_ts(self, output_channel):
         response = self.slack_client.api_call("chat.postMessage",
