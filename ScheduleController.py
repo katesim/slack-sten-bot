@@ -168,9 +168,9 @@ class ScheduleController:
         assert 0 <= day < 7, "invalid day value"
         # Now monday day for tests
         {
-            0: lambda job, *args: schedule.every(20).seconds.do(job, *args), # schedule.every().monday.at(time).do(job, *args)
-            1: lambda job, *args: schedule.every().tuesday.at(time).do(job,*args), # schedule.every(20).seconds.do(job, *args), #
-            2: lambda job, *args: schedule.every().wednesday.at(time).do(job,*args), # schedule.every(25).seconds.do(job, *args),
+            0: lambda job, *args: schedule.every().monday.at(time).do(job, *args), # schedule.every(20).seconds.do(job, *args), # 
+            1: lambda job, *args: schedule.every().tuesday.at(time).do(job,*args),
+            2: lambda job, *args: schedule.every().wednesday.at(time).do(job,*args),
             3: lambda job, *args: schedule.every().thursday.at(time).do(job,*args),
             4: lambda job, *args: schedule.every().friday.at(time).do(job,*args), 
             5: lambda job, *args: schedule.every().saturday.at(time).do(job,*args), 
