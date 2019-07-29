@@ -66,11 +66,11 @@ class ScheduleController:
         reports = work_group.reports
         
         for user in users:
-            if not reports.get(user.user_id):
-                # TODO thread report message 
+            if not reports.get(user.user_id): 
                 self.slack_client.api_call("chat.postMessage", 
                                             channel=group_channel, 
-                                            text=report_message)
+                                            text=report_message,
+                                            thread_ts=work_group.ts_reports)
 
     def schedule_group_questionnaire(self, group_channel, users, times):
 
