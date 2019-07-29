@@ -82,13 +82,9 @@ def message_actions():
                 ts_answer=time.time())
 
             work_group = DBController.get_group({'serial_id': 0})
-            # print("WORK GROUP SHORT OLD")
-            # pprint(work_group.reports)
             work_group.update_reports(reports=works_report_controller.reports)
             DBController.update_reports(work_group)
             #work_group.update_ts(ts_reports=works_report_controller.ts_report)
-            # print("WORK GROUP SHORT NEW")
-            # pprint(work_group.reports)
 
             slack_client.api_call(
                 "chat.update",
@@ -179,26 +175,30 @@ def _command_handler(channel, user, message):
 
     if commands[1] in message_words:
         print(commands[1], message)
-        # TODO заполнить из странички-админки
-        DBController.add_group(dict(
-            channel="CL67NCJ0J", # test channel
-            users=[('UL4D3C0HG', slack_client.api_call("im.open", user='UL4D3C0HG')['channel'].get('id')),
-             ('UHTJL2NKZ', slack_client.api_call("im.open", user='UHTJL2NKZ')['channel'].get('id'))],
-            times={'0': '7:30'}))
+        if not DBController.get_group({'serial_id': 0}):
+            # TODO заполнить из странички-админки
+            DBController.add_group(dict(
+                channel="CL67NCJ0J", # test channel
+                # users=[('UL4D3C0HG', slack_client.api_call("im.open", user='UL4D3C0HG')['channel'].get('id')),
+                #  ('UHTJL2NKZ', slack_client.api_call("im.open", user='UHTJL2NKZ')['channel'].get('id'))],
+                # times={'1': '10:00', "3":"10:00"}))
+                users=[('UL4D3C0HG', slack_client.api_call("im.open", user='UL4D3C0HG')['channel'].get('id')),
+                ('UHTJL2NKZ', slack_client.api_call("im.open", user='UHTJL2NKZ')['channel'].get('id'))],
+                times={'0': '17:00'}))
 
-        slack_client.api_call(
-            "chat.postMessage",
-            channel=channel,
-            text="Add group to database"
-        )
+            slack_client.api_call(
+                "chat.postMessage",
+                channel=channel,
+                text="Add group to database"
+            )
 
-        slack_client.api_call("chat.postMessage",
-                              channel=channel,
-                              text="Init new standUP",
-                              attachments=[])
-        # INIT STANDUP SCHEDULE FOR WORKGROUP
-        work_group = DBController.get_group({'serial_id': 0})
-        schedule_controller.schedule_StandUp(group_channel=work_group.channel)
+            slack_client.api_call("chat.postMessage",
+                                channel=channel,
+                                text="Init new standUP",
+                                attachments=[])
+            # INIT STANDUP SCHEDULE FOR WORKGROUP
+            work_group = DBController.get_group({'serial_id': 0})
+            schedule_controller.schedule_StandUp(group_channel=work_group.channel)
         return True
 
     if commands[2] in message_words:
@@ -248,15 +248,11 @@ def _message_handler(message_event):
                                                                   user_id=user,
                                                                   real_user_name=real_user_name,
                                                                   ts_answer=time.time())
-            # print("AFTER REMEMBER ANSWER")
-            # pprint(works_report_controller.reports)
+            
             work_group = DBController.get_group({'serial_id': 0})
-            # print("WORK GROUP REPORTS OLD")
-            # pprint(work_group.reports)
             work_group.update_reports(reports=works_report_controller.reports)
             DBController.update_reports(work_group)
-            # print("WORK GROUP REPORTS NEW")
-            # pprint(work_group.reports)
+    
             if 'New report' == attachments[0]:
 
                 slack_client.api_call("chat.postMessage",
@@ -269,7 +265,7 @@ def _message_handler(message_event):
                                   text=attachments[0],
                                   attachments=attachments[1],
                                   thread_ts = work_group.ts_reports)
-                #works_report_controller.forgot_old_report(user)
+
             else:
                 slack_client.api_call("chat.postMessage",
                                     channel=channel,  # отправлять следующий вопрос в личку
@@ -299,15 +295,18 @@ def _take_answer(slack_event):
     conversations_history = slack_client.api_call("conversations.history",
                                                     channel=channel,
                                                     latest=str(time.time()),
-                                                    limit=2,
+                                                    limit=3,
                                                     inclusive=True)
     
     if conversations_history.get("ok"):
         answer = conversations_history['messages'][0]['text']
-        question = conversations_history['messages'][1]['text']
-        print('Вопрос: ', question)
-        print('Ответ: ', answer)
-    return answer, question
+        previous = conversations_history['messages'][1]['text']
+        preprevious = conversations_history['messages'][2]['text']
+        if previous == "There's one hour left until the end of the StandUp.":
+            print('Вопрос: ', question)
+            print('Ответ: ', answer)
+            return answer, preprevious
+    return answer, previous
 
 
 def _first_message(channel):
