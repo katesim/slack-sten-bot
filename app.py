@@ -260,6 +260,12 @@ def _message_handler(message_event):
             # print("WORK GROUP REPORTS NEW")
             # pprint(work_group.reports)
             if 'New report' == attachments[0]:
+
+                slack_client.api_call("chat.postMessage",
+                                      channel=channel,
+                                      text="Thank you! I made notes! :pencil:",
+                                      attachments=[])
+
                 slack_client.api_call("chat.postMessage",
                                   channel=work_group.channel,
                                   text=attachments[0],
