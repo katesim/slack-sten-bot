@@ -21,6 +21,8 @@ services:
       - .:/project
     working_dir: /project
     command: python app.py
+    environment:
+      TZ: Europe/Moscow
 
   mongo-db:
     image: mongo:4.1.1

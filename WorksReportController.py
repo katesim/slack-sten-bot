@@ -96,13 +96,12 @@ class WorksReportController:
             }
         ])
 
-    def create_report(self, real_name_user, user_id):
+    def create_report(self, real_name_user, user_id, message=""):
         self.ts_report = time.time()
-
-        res = ''
-        for text in ["*" + a.question + "* \n " + a.answer + "\n" for a in self.reports[user_id]]:
-            res += text
-
+        if not message:
+            for text in ["*" + report.question + "* \n " + report.answer + "\n" for report in self.reports[user_id]]:
+                message += text
+        
         return ('New report', [
             {
                 "fallback": "Upgrade your Slack client to use messages like these.",
@@ -110,7 +109,7 @@ class WorksReportController:
                 "author_name": real_name_user,
                 "attachment_type": "default",
                 "title": "Report",
-                "text": res,
+                "text": message,
                 "ts": self.ts_report
             }
         ])

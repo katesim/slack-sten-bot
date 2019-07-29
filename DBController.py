@@ -35,7 +35,10 @@ class DBController:
 
     @classmethod
     def get_group(cls, filtered_field: dict) -> WorkGroup:
-        return WorkGroup(cls.groups.find_one(filtered_field))
+        if cls.groups.find_one(filtered_field):
+            return WorkGroup(cls.groups.find_one(filtered_field))
+        else:
+            return None
 
     @classmethod
     def get_all_groups(cls, filter_fields=None):

@@ -15,9 +15,11 @@ class ScheduleController:
 
     # activate schedule events for all StandUp activity for work group
     def schedule_StandUp(self, group_channel):
-        work_group = WorkGroup(DBController.get_group({'channel':group_channel}))
+        work_group = DBController.get_group({'channel':group_channel})
         users = work_group.users
         times = work_group.times
+        #print("REAL TIME", times)
+        #times = ["21:4", "21:7", "21:10"]
         self.schedule_group_questionnaire(group_channel, users, times)
         self.schedule_group_reminder(group_channel, users, times)
         self.schedule_no_answer(group_channel, users, times)
@@ -27,10 +29,11 @@ class ScheduleController:
         
         print("FORM REMINDER")
         # add reminder for every report day
-        for weekday in times.keys():
+        for weekday in times.keys(): #time in times:
             # calculate time for reminder
             time, weekday = self.plus_hours(times[weekday], int(weekday), hour_shift=1)
-            #weekday=1
+            #weekday="0"
+            #time = self.plus_minutes(time, 1)
             time = self.formatted_time(time)
             print("ADD SCHEDULE REMINDER JOB FOR DAY", weekday)
             self.add_scheduled_job(time, int(weekday), self.send_reminder_messages, group_channel, users)
@@ -41,8 +44,8 @@ class ScheduleController:
         work_group = DBController.get_group({'channel':group_channel})
         reports = work_group.reports
         for user in users:
-            # if report is empty  
-            if not reports.get(user.user_id):
+            report_status = self.get_report_status(reports.get(user.user_id))
+            if report_status == "empty" or report_status == "incomplete":
                 self.slack_client.api_call("chat.postMessage", 
                                                 channel=user.im_channel, 
                                                 text=reminder_message)
@@ -51,9 +54,12 @@ class ScheduleController:
 
         print("FORM REPORT")
         # add report into group channel gor every report day
-        for weekday in times.keys():
-            time, weekday = self.plus_hours(times[weekday], int(weekday), hour_shift=3)
+        for weekday in times.keys(): # time in times:
+            time, weekday = self.plus_hours(times[weekday], int(weekday), hour_shift=2)
             #weekday=2
+            #weekday="0"
+
+            #time = self.plus_minutes(time, 2)
             time = self.formatted_time(time)
             print("ADD SCHEDULE REPORT JOB FOR DAY", weekday)
             self.add_scheduled_job(time, int(weekday), self.send_no_answer_report, group_channel, users)
@@ -64,26 +70,48 @@ class ScheduleController:
         # if empty send no answer
         work_group = DBController.get_group({'channel':group_channel})
         reports = work_group.reports
-        
         for user in users:
-            if not reports.get(user.user_id):
-                # TODO thread report message 
+            real_user_name = self.get_real_user_name(user.user_id)
+            report_status = self.get_report_status(reports.get(user.user_id))
+            # has answer
+            if report_status == "incomplete":
+                    text, attachment = self.works_report_controller.create_report(real_user_name, user.user_id) 
+                    self.slack_client.api_call("chat.postMessage", 
+                                                channel=group_channel, 
+                                                text=text,
+                                                attachments=attachment,
+                                                thread_ts=work_group.ts_reports)
+            if report_status == "empty":
+                text, attachment = self.works_report_controller.create_report(real_user_name, user.user_id, report_message) 
                 self.slack_client.api_call("chat.postMessage", 
                                             channel=group_channel, 
-                                            text=report_message)
+                                            text=text,
+                                            attachments=attachment,
+                                            thread_ts=work_group.ts_reports)
+
+
 
     def schedule_group_questionnaire(self, group_channel, users, times):
 
         print("FORM QUESTIONNARE")
         # start questionnare in every report day
-        for weekday in times.keys():
+        for weekday in times.keys(): # time in times:#
+            #weekday="0"
             time = self.formatted_time(times[weekday])
+            #time = self.formatted_time(time)
             print("ADD SCHEDULE QUESTIONNARE JOB FOR DAY", weekday)
-            self.add_scheduled_job(time, int(weekday), self.send_question_messages, users)
+            self.add_scheduled_job(time, int(weekday), self.send_question_messages, group_channel, users)
 
-    def send_question_messages(self, users):
+    def send_question_messages(self, group_channel, users):
 
         attachments = self.works_report_controller.answer_menu(self.works_report_controller.questions[0])
+        # delete all reports from db and from work controller before first question
+        work_group = DBController.get_group({'channel':group_channel})
+        work_group.clean_reports()
+        work_group.update_ts(self.set_report_ts(work_group.channel))
+        DBController.update_reports(work_group)
+        self.works_report_controller.clean_reports()
+
         for user in users:
             print("USER", user)
             print("SEND QUESTION MESSAGE FOR MEMBER", user.user_id)
@@ -93,6 +121,42 @@ class ScheduleController:
                                     channel=user.im_channel,
                                     text=attachments[0],
                                     attachments=attachments[1])
+
+    # TODO move into reports
+    def get_report_status(self, reports):
+        print("REPORTS FOR USER", reports)
+        short_answers = [pair[1] for pair in self.works_report_controller.short_answers]
+        if reports:
+            print("FIRST REPORT", reports[0][1])
+            print("SHORT ANSWERS", self.works_report_controller.short_answers)
+            if len(reports) != len(self.works_report_controller.questions):
+                if reports[0][1] in short_answers:
+                    print("STATUS short")
+                    return "short"
+                else:
+                    print("STATUS incomplete")
+                    return "incomplete"
+            else:
+                print("STATUS complete")
+                return "complete"
+        else:
+            print("STATUS empty")
+            return "empty"
+
+    def get_real_user_name(self, user_id):
+        user_info = self.slack_client.api_call("users.info", user=user_id)
+        real_user_name = "user"
+        if user_info.get("ok"):
+            real_user_name = user_info.get("user").get("real_name")
+            print('REAL NAME :', real_user_name, 'USER ID :', user_id)
+        return real_user_name
+
+    def set_report_ts(self, output_channel):
+        response = self.slack_client.api_call("chat.postMessage",
+                                    channel = output_channel,
+                                    text = "Update for {} WorkGroup".format(output_channel))
+        ts = response["message"]["ts"]
+        return ts
 
     def stop_all(self):
         schedule.clear()
@@ -121,6 +185,14 @@ class ScheduleController:
         new_time = "{}:{}".format(new_hour, minute)
         return new_time, weekday
 
+   # TODO delete or modify this function
+    def plus_minutes(self, time, minute_shift):
+        assert ":" in time, "time format should be hh:mm or h:mm"
+
+        hour, minute = [int(value) for value in time.split(":")]
+        minute += minute_shift
+        return "{}:{}".format(hour, minute)
+
     # formatting time for schedule 
     def formatted_time(self, time):
         assert ":" in time, "time format should be hh:mm or h:mm"
@@ -143,9 +215,9 @@ class ScheduleController:
         assert 0 <= day < 7, "invalid day value"
         # Now monday day for tests
         {
-            0: lambda job, *args: schedule.every(20).seconds.do(job, *args), # schedule.every().monday.at(time).do(job, *args)
-            1: lambda job, *args: schedule.every().tuesday.at(time).do(job,*args), # schedule.every(20).seconds.do(job, *args), #
-            2: lambda job, *args: schedule.every().wednesday.at(time).do(job,*args), # schedule.every(25).seconds.do(job, *args),
+            0: lambda job, *args: schedule.every().monday.at(time).do(job, *args), # schedule.every(20).seconds.do(job, *args), # 
+            1: lambda job, *args: schedule.every().tuesday.at(time).do(job,*args),
+            2: lambda job, *args: schedule.every().wednesday.at(time).do(job,*args),
             3: lambda job, *args: schedule.every().thursday.at(time).do(job,*args),
             4: lambda job, *args: schedule.every().friday.at(time).do(job,*args), 
             5: lambda job, *args: schedule.every().saturday.at(time).do(job,*args), 
