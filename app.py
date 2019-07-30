@@ -185,7 +185,7 @@ def _command_handler(channel, user, message):
                 ('UJU4M634Z', slack_client.api_call("im.open", user='UJU4M634Z')['channel'].get('id')), # grinch
                 ('UEG2QQRQC', slack_client.api_call("im.open", user='UEG2QQRQC')['channel'].get('id')), # kvy
                 ('U4QQQHXU7', slack_client.api_call("im.open", user='U4QQQHXU7')['channel'].get('id'))], # kate.sim
-                times={'1': '10:00', '3':'10:00'}))
+                times={'1': '11:00', '3':'10:00'}))
 
             slack_client.api_call(
                 "chat.postMessage",
@@ -304,9 +304,19 @@ def _take_answer(slack_event):
         previous = conversations_history['messages'][1]['text']
         preprevious = conversations_history['messages'][2]['text']
         if previous == "There's one hour left until the end of the StandUp.":
-            print('Вопрос: ', question)
-            print('Ответ: ', answer)
+            #print('Вопрос: ', question)
+            #print('Ответ: ', answer)
             return answer, preprevious
+    else:
+        conversations_history = slack_client.api_call("conversations.history",
+                                                    channel=channel,
+                                                    latest=str(time.time()),
+                                                    limit=2,
+                                                    inclusive=True)
+        if conversations_history.get("ok"):
+            answer = conversations_history['messages'][0]['text']
+            previous = conversations_history['messages'][1]['text']
+            return answer, previous
     return answer, previous
 
 
