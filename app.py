@@ -243,8 +243,7 @@ def _message_handler(message_event):
         previous_message, current_message = get_qa(message_event)
         #print('current_message, previous_message', current_message, previous_message)
         if previous_message in WorksReportController().questions:
-            print("BEFORE REMEMBER ANSWER")
-            pprint(works_report_controller.reports)
+            
             attachments = works_report_controller.remember_answer(answer=current_message,
                                                                   question=previous_message,
                                                                   user_id=user,
@@ -293,22 +292,24 @@ def get_real_user_name(user_id):
 def get_qa(slack_event):
     global schedule_controller
     channel = slack_event["channel"]
-    answer = None
-    previous = None
     conversations_history = slack_client.api_call("conversations.history",
                                                     channel=channel,
                                                     latest=str(time.time()),
                                                     limit=3,
                                                     inclusive=True)
-    
+                                                    
     if conversations_history.get("ok"):
         answer = conversations_history['messages'][0]['text']
         previous = conversations_history['messages'][1]['text']
+        previous_subtype = conversations_history['messages'][1].get('subtype')
         preprevious = conversations_history['messages'][2]['text']
-        if previous == schedule_controller.reminder_message:
+        preprevious_subtype = conversations_history['messages'][2].get('subtype')
+        if previous == schedule_controller.reminder_message and preprevious_subtype == "bot_message":
             print('Вопрос: ', preprevious)
             print('Ответ: ', answer)
             return preprevious, answer
+        if previous_subtype == "bot_message":
+            return previous, answer
     else:
         conversations_history = slack_client.api_call("conversations.history",
                                                     channel=channel,
@@ -318,8 +319,10 @@ def get_qa(slack_event):
         if conversations_history.get("ok"):
             answer = conversations_history['messages'][0]['text']
             previous = conversations_history['messages'][1]['text']
-            return previous, answer
-    return previous, answer
+            previous_subtype = conversations_history['messages'][1].get('subtype')
+            if previous_subtype == "bot_message":
+                return previous, answer
+    return None, None
 
 
 def _first_message(channel):
