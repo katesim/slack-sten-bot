@@ -150,10 +150,19 @@ class ScheduleController:
             print('REAL NAME :', real_user_name, 'USER ID :', user_id)
         return real_user_name
 
+    def get_real_channel_name(self, channel_id):
+        channel_info = self.slack_client.api_call("channels.info", channel=channel_id)
+        real_channel_name = "Channel"
+        if channel_info.get("ok"):
+            real_channel_name = channel_info.get("channel").get("name")
+            print('REAL CHANNEL NAME :', real_channel_name, 'CHANNEL ID :', channel_id)
+        return real_channel_name
+
     def set_report_ts(self, output_channel):
+        real_channel_name = self.get_real_channel_name(output_channel)
         response = self.slack_client.api_call("chat.postMessage",
                                     channel = output_channel,
-                                    text = "Update for {} WorkGroup".format(output_channel))
+                                    text = "Update for *{}* work group".format(real_channel_name))
         ts = response["message"]["ts"]
         return ts
 

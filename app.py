@@ -141,12 +141,14 @@ def get_menu_answers(submission):
 
 def start_questionnaire(work_group_id=0):
     global works_report_controller
+    global schedule_controller
+
     attachments = works_report_controller.answer_menu(works_report_controller.questions[0])
 
     # delete all reports from db and from work controller before first question
     work_group = DBController.get_group({'serial_id': work_group_id})
     work_group.clean_reports()
-    work_group.update_ts(set_report_ts(work_group.channel))
+    work_group.update_ts(schedule_controller.set_report_ts(work_group.channel))
     # print("REMOVE WG ")
     # pprint(work_group.reports)
     DBController.update_reports(work_group)
@@ -182,8 +184,8 @@ def _command_handler(channel, user, message):
                 # users=[('UL4D3C0HG', slack_client.api_call("im.open", user='UL4D3C0HG')['channel'].get('id')),
                 #  ('UHTJL2NKZ', slack_client.api_call("im.open", user='UHTJL2NKZ')['channel'].get('id'))],
                 # times={'1': '10:00', "3":"10:00"}))
-                users=[('UL4D3C0HG', slack_client.api_call("im.open", user='UL4D3C0HG')['channel'].get('id')),
-                ('UHTJL2NKZ', slack_client.api_call("im.open", user='UHTJL2NKZ')['channel'].get('id'))],
+                users=[('UL4D3C0HG', slack_client.api_call("im.open", user='UL4D3C0HG')['channel'].get('id'))],
+                #('UHTJL2NKZ', slack_client.api_call("im.open", user='UHTJL2NKZ')['channel'].get('id'))],
                 times={'0': '17:00'}))
 
             slack_client.api_call(
@@ -273,12 +275,12 @@ def _message_handler(message_event):
                                     attachments=attachments[1])
     return make_response("Message Sent", 200, )
 
-def set_report_ts(output_channel):
-    response = slack_client.api_call("chat.postMessage",
-                                channel = output_channel,
-                                text = "Update for {} WorkGroup".format(output_channel))
-    ts = response["message"]["ts"]
-    return ts
+# def set_report_ts(output_channel):
+#     response = slack_client.api_call("chat.postMessage",
+#                                 channel = output_channel,
+#                                 text = "Update for {} WorkGroup".format(output_channel))
+#     ts = response["message"]["ts"]
+#     return ts
 
 def get_real_user_name(user_id):
     user_info = slack_client.api_call("users.info", user=user_id)
