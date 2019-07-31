@@ -90,9 +90,9 @@ class WorksReportController:
     def create_report(self, real_name_user, user_id, message=""):
         self.ts_report = time.time()
         if not message:
-            for text in ["*" + report.question + "* \n " + report.answer + "\n" for report in self.reports[user_id]]:
+            for text in ["*{}* \n {} \n".format(report.question, report.answer) for report in self.reports[user_id]]:
                 message += text
-        
+                
         return ('New report', [
             {
                 "fallback": "Upgrade your Slack client to use messages like these.",
