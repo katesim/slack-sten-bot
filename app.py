@@ -238,7 +238,7 @@ def _message_handler(message_event):
         real_user_name = get_real_user_name(user)
         print("USER ID", user)
         # предыдущее вопрос?
-        current_message, previous_message = _take_answer(message_event)
+        previous_message, current_message = get_qa(message_event)
         #print('current_message, previous_message', current_message, previous_message)
         if previous_message in WorksReportController().questions:
             print("BEFORE REMEMBER ANSWER")
@@ -288,10 +288,11 @@ def get_real_user_name(user_id):
         print('REAL NAME :', real_user_name, 'USER ID :', user_id)
     return real_user_name
 
-def _take_answer(slack_event):
+def get_qa(slack_event):
+    global schedule_controller
     channel = slack_event["channel"]
     answer = None
-    question = None
+    previous = None
     conversations_history = slack_client.api_call("conversations.history",
                                                     channel=channel,
                                                     latest=str(time.time()),
@@ -302,11 +303,21 @@ def _take_answer(slack_event):
         answer = conversations_history['messages'][0]['text']
         previous = conversations_history['messages'][1]['text']
         preprevious = conversations_history['messages'][2]['text']
-        if previous == "There's one hour left until the end of the StandUp.":
-            print('Вопрос: ', question)
+        if previous == schedule_controller.reminder_message:
+            print('Вопрос: ', preprevious)
             print('Ответ: ', answer)
-            return answer, preprevious
-    return answer, previous
+            return preprevious, answer
+    else:
+        conversations_history = slack_client.api_call("conversations.history",
+                                                    channel=channel,
+                                                    latest=str(time.time()),
+                                                    limit=2,
+                                                    inclusive=True)
+        if conversations_history.get("ok"):
+            answer = conversations_history['messages'][0]['text']
+            previous = conversations_history['messages'][1]['text']
+            return previous, answer
+    return previous, answer
 
 
 def _first_message(channel):

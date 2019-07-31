@@ -12,6 +12,8 @@ class ScheduleController:
     def __init__(self, slack_client, works_report_controller):
         self.slack_client = slack_client
         self.works_report_controller = works_report_controller
+        self.reminder_message = "There's one hour left until the end of the StandUp."
+        self.no_answer_message = "No answer"
 
     # activate schedule events for all StandUp activity for work group
     def schedule_StandUp(self, group_channel):
@@ -39,7 +41,6 @@ class ScheduleController:
             self.add_scheduled_job(time, int(weekday), self.send_reminder_messages, group_channel, users)
 
     def send_reminder_messages(self, group_channel, users):
-        reminder_message = "There's one hour left until the end of the StandUp."
         # need actual info
         work_group = DBController.get_group({'channel':group_channel})
         reports = work_group.reports
@@ -48,7 +49,7 @@ class ScheduleController:
             if report_status == "empty" or report_status == "incomplete":
                 self.slack_client.api_call("chat.postMessage", 
                                                 channel=user.im_channel, 
-                                                text=reminder_message)
+                                                text=self.reminder_message)
 
     def schedule_no_answer(self, group_channel, users, times):
 
@@ -65,8 +66,6 @@ class ScheduleController:
             self.add_scheduled_job(time, int(weekday), self.send_no_answer_report, group_channel, users)
 
     def send_no_answer_report(self, group_channel, users):
-        
-        report_message = "No answer"
         # if empty send no answer
         work_group = DBController.get_group({'channel':group_channel})
         reports = work_group.reports
@@ -75,14 +74,14 @@ class ScheduleController:
             report_status = self.get_report_status(reports.get(user.user_id))
             # has answer
             if report_status == "incomplete":
-                    text, attachment = self.works_report_controller.create_report(real_user_name, user.user_id) 
-                    self.slack_client.api_call("chat.postMessage", 
-                                                channel=group_channel, 
-                                                text=text,
-                                                attachments=attachment,
-                                                thread_ts=work_group.ts_reports)
+                text, attachment = self.works_report_controller.create_report(real_user_name, user.user_id) 
+                self.slack_client.api_call("chat.postMessage", 
+                                            channel=group_channel, 
+                                            text=text,
+                                            attachments=attachment,
+                                            thread_ts=work_group.ts_reports)
             if report_status == "empty":
-                text, attachment = self.works_report_controller.create_report(real_user_name, user.user_id, report_message) 
+                text, attachment = self.works_report_controller.create_report(real_user_name, user.user_id, self.no_answer_message) 
                 self.slack_client.api_call("chat.postMessage", 
                                             channel=group_channel, 
                                             text=text,
