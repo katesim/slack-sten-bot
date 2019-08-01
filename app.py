@@ -27,7 +27,7 @@ slack_events_adapter = SlackEventAdapter(SIGNING_SECRET, "/slack/events", app)
 schedule.run_continuously()
 
 # List of commands for bot
-commands = ['/q', '/init', '/start', '/stop']
+commands = ['/q', '/init', '/stop']
 
 global works_report_controller
 works_report_controller = WorksReportController()
@@ -76,13 +76,12 @@ def message_actions():
             DBController.update_reports(work_group)
             # work_group.update_ts(ts_reports=works_report_controller.ts_report)
 
-            slack_client.api_call(
-                "chat.update",
-                channel=channel,
-                ts=form_json["message_ts"],
-                text="Your answer is {}  :coffee:".format(short_answer),
-                attachments=[]  # empty `attachments` to clear the existing massage attachments
-            )
+            slack_client.api_call("chat.update",
+                                  channel=channel,
+                                  ts=form_json["message_ts"],
+                                  text="Your answer is {}  :coffee:".format(short_answer),
+                                  attachments=[]  # empty `attachments` to clear the existing massage attachments
+                                  )
             slack_client.api_call("chat.postMessage",
                                   channel="CL67NCJ0J",  # work_group.channel,  # TODO отправлять в тред РГ
                                   text=attachments[0],
@@ -137,32 +136,18 @@ def _command_handler(channel, message):
                 # ('UHTJL2NKZ', slack_client.api_call("im.open", user='UHTJL2NKZ')['channel'].get('id'))],
                 times={'0': '17:00'}))
 
-            slack_client.api_call(
-                "chat.postMessage",
-                channel=channel,
-                text="Add group to database"
-            )
-
             slack_client.api_call("chat.postMessage",
                                   channel=channel,
-                                  text="Init new standUP",
-                                  attachments=[])
+                                  text="Add group to database and Init new standUP"
+                                  )
+
             # INIT STANDUP SCHEDULE FOR WORKGROUP
             work_group = DBController.get_group({'serial_id': 0})
             schedule_controller.schedule_StandUp(group_channel=work_group.channel)
         return True
 
     if commands[2] in message_words:
-        print(commands[2], message)
-        print('SCHEDULE START')
-        # TODO take group channel
-        work_group = DBController.get_group({'serial_id': 0})
-        schedule_controller.schedule_StandUp(group_channel=work_group.channel)
-        return True
-
-    if commands[3] in message_words:
-        print(commands[3], message)
-        print('SCHEDULE STOP')
+        print(commands[2], message, '\nSCHEDULE STOP')
         schedule_controller.stop_all()
         return True
 
@@ -278,14 +263,9 @@ def message(event):
 
     # ============= MESSAGE FROM USER ============= #
     if subtype is None:  # != "bot_message":
-
         channel = message_event["channel"]
         if channel_type == "im":  # im means direct messages
-
-            user = message_event.get("user")
             message = message_event.get("text")
-
-            # bot mentioning implies command
             if str(BOT_MENTIONED) in message:
                 print("BOT WAS MENTIONED IN DIRECT MESSAGE FROM USER", "\n")
                 _command_handler(channel, message)
@@ -294,7 +274,6 @@ def message(event):
                 _message_handler(message_event)
         else:
             print("CHANNEL MESSAGE FROM USER")
-
     if subtype == "bot_message" and message_event.get("attachments") is not None:
         print("BOT INTERACTIVE MESSAGE")
 

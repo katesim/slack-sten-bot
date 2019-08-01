@@ -19,22 +19,7 @@ class WorksReportController:
         self.reports = {}
         self.ts_report = None
         self.Cell = namedtuple('Cell', 'question answer ts_answer')
-        # self.is_finished = False
-        # self.ts_thread = None
-        # self.real_name_user = None
         self.question_counter = 0
-
-    def take_short_answer(self, selection=str):
-        for answer in self.short_answers:
-            if selection == answer[0]:
-                message_text = answer[1]
-        return message_text
-
-    def take_menu_options(self):
-        menu_options = dict(options=[])
-        for answer in self.short_answers:
-            menu_options['options'].append(dict(text=answer[1], value=answer[0]))
-        return menu_options
 
     def remember_answer(self, question, answer, user_id, real_user_name, ts_answer):
         self.question_counter += 1
@@ -55,25 +40,6 @@ class WorksReportController:
             self.question_counter = 0
             return self.create_report(real_user_name, user_id)
 
-    @staticmethod
-    def answer_menu(question="What did you do yesterday? :coffee:"):
-        return (question, [
-            {
-                "fallback": "Upgrade your Slack client to use messages like these.",
-                "color": "#3AA3E3",
-                "attachment_type": "default",
-                "callback_id": "menu_options_2319",
-                "actions": [
-                    {
-                        "name": "short_answer_list",
-                        "text": "Pick a variant...",
-                        "type": "select",
-                        "data_source": "external"
-                    }
-                ]
-            }
-        ])
-
     def create_report(self, real_name_user, user_id, message=""):
         self.ts_report = time.time()
         if not message:
@@ -92,8 +58,59 @@ class WorksReportController:
             }
         ])
 
+    def get_report_status(self, reports):
+        print("REPORTS FOR USER", reports)
+        short_answers = [pair[1] for pair in self.short_answers]
+        if reports:
+            print("FIRST REPORT", reports[0][1])
+            print("SHORT ANSWERS", self.short_answers)
+            if len(reports) != len(self.questions):
+                if reports[0][1] in short_answers:
+                    print("STATUS short")
+                    return "short"
+                else:
+                    print("STATUS incomplete")
+                    return "incomplete"
+            else:
+                print("STATUS complete")
+                return "complete"
+        else:
+            print("STATUS empty")
+            return "empty"
+
     def clean_reports(self):
         self.reports = {}
 
     def forgot_old_report(self, user_id):
         del self.reports[user_id]
+
+    def take_short_answer(self, selection=str):
+        for answer in self.short_answers:
+            if selection == answer[0]:
+                message_text = answer[1]
+        return message_text
+
+    def take_menu_options(self):
+        menu_options = dict(options=[])
+        for answer in self.short_answers:
+            menu_options['options'].append(dict(text=answer[1], value=answer[0]))
+        return menu_options
+
+    @staticmethod
+    def answer_menu(question="What did you do yesterday? :coffee:"):
+        return (question, [
+            {
+                "fallback": "Upgrade your Slack client to use messages like these.",
+                "color": "#3AA3E3",
+                "attachment_type": "default",
+                "callback_id": "menu_options_2319",
+                "actions": [
+                    {
+                        "name": "short_answer_list",
+                        "text": "Pick a variant...",
+                        "type": "select",
+                        "data_source": "external"
+                    }
+                ]
+            }
+        ])

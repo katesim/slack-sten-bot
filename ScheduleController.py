@@ -50,7 +50,7 @@ class ScheduleController:
         work_group = DBController.get_group({'channel': group_channel})
         reports = work_group.reports
         for user in users:
-            report_status = self.get_report_status(reports.get(user.user_id))
+            report_status = self.works_report_controller.get_report_status(reports.get(user.user_id))
             if report_status == "empty" or report_status == "incomplete":
                 self.slack_client.api_call("chat.postMessage",
                                            channel=user.im_channel,
@@ -76,7 +76,7 @@ class ScheduleController:
         reports = work_group.reports
         for user in users:
             real_user_name = Utils.get_real_user_name(self.slack_client, user.user_id)
-            report_status = self.get_report_status(reports.get(user.user_id))
+            report_status = self.works_report_controller.get_report_status(reports.get(user.user_id))
             # has answer
             if report_status == "incomplete":
                 text, attachment = self.works_report_controller.create_report(real_user_name, user.user_id)
@@ -122,27 +122,6 @@ class ScheduleController:
                                        channel=user.im_channel,
                                        text=attachments[0],
                                        attachments=attachments[1])
-
-    # TODO move into reports
-    def get_report_status(self, reports):
-        print("REPORTS FOR USER", reports)
-        short_answers = [pair[1] for pair in self.works_report_controller.short_answers]
-        if reports:
-            print("FIRST REPORT", reports[0][1])
-            print("SHORT ANSWERS", self.works_report_controller.short_answers)
-            if len(reports) != len(self.works_report_controller.questions):
-                if reports[0][1] in short_answers:
-                    print("STATUS short")
-                    return "short"
-                else:
-                    print("STATUS incomplete")
-                    return "incomplete"
-            else:
-                print("STATUS complete")
-                return "complete"
-        else:
-            print("STATUS empty")
-            return "empty"
 
     def stop_all(self):
         schedule.clear()
