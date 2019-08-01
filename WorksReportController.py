@@ -8,9 +8,6 @@ class Report:
         self.user_id = user_id
         self.report = {self.user_id: []}
 
-    def add_answer(self, cell: namedtuple('Cell', 'question answer ts_answer')):
-        self.report[self.user_id].append(cell)
-
     def __getitem__(self, index):
         return self.report[self.user_id][index]
 
@@ -30,14 +27,11 @@ class WorksReportController:
         self.short_answers = short_answers
         self.reports = {}
         self.ts_report = None
-        self.question_counter = 0
-        self.real_name_user = None
         self.Cell = namedtuple('Cell', 'question answer ts_answer')
-        self.is_finished = False
-        self.ts_thread = None
-
-    def clean_reports(self):
-        self.reports = {}
+        # self.is_finished = False
+        # self.ts_thread = None
+        # self.real_name_user = None
+        self.question_counter = 0
 
     def take_short_answer(self, selection=str):
         for answer in self.short_answers:
@@ -52,8 +46,10 @@ class WorksReportController:
         return menu_options
 
     def remember_answer(self, question, answer, user_id, real_user_name, ts_answer):
-        
+        self.question_counter += 1
+        print('BEFORE ',self.reports)
         self.reports.update(Report(user_id=user_id))
+        print('AFTER ', self.reports)
         if not self.reports.get(user_id):
             self.reports[user_id] = [self.Cell(question, answer, ts_answer)]
         else:
@@ -63,13 +59,16 @@ class WorksReportController:
         self.ts_report = None
 
         if answer in [short_answer[1] for short_answer in self.short_answers]:
+            self.question_counter = 0
             return self.create_report(real_user_name, user_id)
         try:
             return self.answer_menu(question=self.questions[len(self.reports[user_id])])
         except:
+            self.question_counter = 0
             return self.create_report(real_user_name, user_id)
 
-    def answer_menu(self, question="What did you do yesterday? :coffee:"):
+    @staticmethod
+    def answer_menu(question="What did you do yesterday? :coffee:"):
         return (question, [
             {
                 "fallback": "Upgrade your Slack client to use messages like these.",
@@ -92,7 +91,7 @@ class WorksReportController:
         if not message:
             for text in ["*{}* \n {} \n".format(report.question, report.answer) for report in self.reports[user_id]]:
                 message += text
-                
+
         return ('New report', [
             {
                 "fallback": "Upgrade your Slack client to use messages like these.",
@@ -105,16 +104,8 @@ class WorksReportController:
             }
         ])
 
+    def clean_reports(self):
+        self.reports = {}
+
     def forgot_old_report(self, user_id):
         del self.reports[user_id]
-
-if __name__ == '__main__':
-    ts = '12341234'
-    Cell = namedtuple('Cell', 'question answer ts_answer')
-
-    report = Report(user_id='1324')
-
-    report.add_answer(Cell('What did you do yesterday?', 'work', ts))
-    report.add_answer(Cell('What are you planning do today?', 'rest', ts))
-    report.add_answer(Cell('Any problem?', 'No', ts))
-    print(report)
