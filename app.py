@@ -31,7 +31,6 @@ schedule.run_continuously()
 commands = ['/q', '/init', '/start', '/stop']
 
 global works_report_controller
-global schedule_controller
 
 works_report_controller = WorksReportController()
 schedule_controller = ScheduleController(slack_client, works_report_controller)
@@ -134,8 +133,8 @@ def start_questionnaire(work_group_id=0):
 
 def _command_handler(channel, user, message):
     global works_report_controller
-    global schedule_controller
 
+    schedule_controller = ScheduleController(slack_client, works_report_controller)
     message_words = message.split()
     if commands[0] in message_words:
         print(commands[0], message)
