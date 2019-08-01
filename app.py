@@ -215,11 +215,11 @@ def _message_handler(message_event):
                                                       latest=str(time.time()),
                                                       limit=3,
                                                       inclusive=True)
-        qa, answer = get_answer(conversations_history)
-        print('QA: ', qa, 'ANSWER: ', answer)
+        question, answer = get_qa(conversations_history)
+        print('QUESTION: ', question, 'ANSWER: ', answer)
         if answer:
             attachments = works_report_controller.remember_answer(answer=answer,
-                                                                  question=qa,
+                                                                  question=question,
                                                                   user_id=user,
                                                                   real_user_name=real_user_name,
                                                                   ts_answer=time.time())
@@ -249,7 +249,7 @@ def _message_handler(message_event):
     return make_response("Message Sent", 200, )
 
 
-def get_answer(conversations_history):
+def get_qa(conversations_history):
     messages = [x['text'] for x in conversations_history['messages']][::-1]
     print('LAST 3 MESSAGES', messages)
     # TODO добавить проверку на бота
