@@ -3,15 +3,6 @@ from collections import namedtuple
 from pprint import pprint
 
 
-class Report:
-    def __init__(self, user_id: str):
-        self.user_id = user_id
-        self.report = {self.user_id: []}
-
-    def __getitem__(self, index):
-        return self.report[self.user_id][index]
-
-
 class WorksReportController:
     def __init__(self, questions=None, short_answers=None):
         if questions is None:
@@ -47,9 +38,6 @@ class WorksReportController:
 
     def remember_answer(self, question, answer, user_id, real_user_name, ts_answer):
         self.question_counter += 1
-        print('BEFORE ',self.reports)
-        self.reports.update(Report(user_id=user_id))
-        print('AFTER ', self.reports)
         if not self.reports.get(user_id):
             self.reports[user_id] = [self.Cell(question, answer, ts_answer)]
         else:
