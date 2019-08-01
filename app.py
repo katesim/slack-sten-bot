@@ -239,13 +239,16 @@ def _message_handler(message_event):
     if user:
         real_user_name = get_real_user_name(user)
         print("USER ID", user)
-        # предыдущее вопрос?
-        previous_message, current_message = get_qa(message_event)
-        #print('current_message, previous_message', current_message, previous_message)
-        if previous_message in WorksReportController().questions:
-            
-            attachments = works_report_controller.remember_answer(answer=current_message,
-                                                                  question=previous_message,
+        conversations_history = slack_client.api_call("conversations.history",
+                                                      channel=channel,
+                                                      latest=str(time.time()),
+                                                      limit=3,
+                                                      inclusive=True)
+        qa, answer = get_answer(conversations_history)
+        print('QA: ', qa, 'ANSWER: ', answer)
+        if answer:
+            attachments = works_report_controller.remember_answer(answer=answer,
+                                                                  question=qa,
                                                                   user_id=user,
                                                                   real_user_name=real_user_name,
                                                                   ts_answer=time.time())
@@ -289,40 +292,19 @@ def get_real_user_name(user_id):
         print('REAL NAME :', real_user_name, 'USER ID :', user_id)
     return real_user_name
 
-def get_qa(slack_event):
-    global schedule_controller
-    channel = slack_event["channel"]
-    conversations_history = slack_client.api_call("conversations.history",
-                                                    channel=channel,
-                                                    latest=str(time.time()),
-                                                    limit=3,
-                                                    inclusive=True)
-                                                    
-    if conversations_history.get("ok"):
-        answer = conversations_history['messages'][0]['text']
-        previous = conversations_history['messages'][1]['text']
-        previous_subtype = conversations_history['messages'][1].get('subtype')
-        preprevious = conversations_history['messages'][2]['text']
-        preprevious_subtype = conversations_history['messages'][2].get('subtype')
-        if previous == schedule_controller.reminder_message and preprevious_subtype == "bot_message":
-            print('Вопрос: ', preprevious)
-            print('Ответ: ', answer)
-            return preprevious, answer
-        if previous_subtype == "bot_message":
-            return previous, answer
-    else:
-        conversations_history = slack_client.api_call("conversations.history",
-                                                    channel=channel,
-                                                    latest=str(time.time()),
-                                                    limit=2,
-                                                    inclusive=True)
-        if conversations_history.get("ok"):
-            answer = conversations_history['messages'][0]['text']
-            previous = conversations_history['messages'][1]['text']
-            previous_subtype = conversations_history['messages'][1].get('subtype')
-            if previous_subtype == "bot_message":
-                return previous, answer
-    return None, None
+
+def get_answer(conversations_history):
+    messages = [x['text'] for x in conversations_history['messages']][::-1]
+    print('LAST 3 MESSAGES', messages)
+
+    for index, message in enumerate(messages):
+        if message in WorksReportController().questions:
+            try:
+                if not messages[index + 1] in ScheduleController.reminder_message:
+                    return message, messages[index + 1]
+            except:
+                return message, ''
+    return '', ''
 
 
 def _first_message(channel):

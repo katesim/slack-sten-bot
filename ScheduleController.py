@@ -8,7 +8,11 @@ from DBController import DBController
 YOUR_DIRECT_CHANNEL = os.environ.get("YOUR_DIRECT_CHANNEL")
 YOUR_USER_ID = os.environ.get("YOUR_USER_ID")
 
+
 class ScheduleController:
+    reminder_message = "There's one hour left until the end of the StandUp."
+    no_answer_message = "No answer"
+
     def __init__(self, slack_client, works_report_controller):
         self.slack_client = slack_client
         self.works_report_controller = works_report_controller
