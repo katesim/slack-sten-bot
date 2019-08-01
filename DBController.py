@@ -65,6 +65,15 @@ class DBController:
         )
         print('UPD REPORTS IN DB')
 
+    @staticmethod
+    def check_db_status():
+        db_len = 0
+        for _ in DBController.get_all_groups():
+            db_len += 1
+        if db_len == 0:
+            print('First setup database...')
+            DBController.first_setup()
+
 
 if __name__ == '__main__':
     DBController.first_setup()

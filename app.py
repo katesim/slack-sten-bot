@@ -329,16 +329,7 @@ def bot_added(event):
     _first_message(channel)
 
 
-def check_db_status():
-    db_len = 0
-    for _ in DBController.get_all_groups():
-        db_len += 1
-    if db_len == 0:
-        print('First setup database...')
-        DBController.first_setup()
-
-
 if __name__ == '__main__':
-    check_db_status()
+    DBController.check_db_status()
     port = int(os.getenv('PORT', 5000))
     app.run(debug=False, port=port, host='0.0.0.0')
