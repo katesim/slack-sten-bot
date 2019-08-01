@@ -110,9 +110,7 @@ class ScheduleController:
         attachments = self.works_report_controller.answer_menu(self.works_report_controller.questions[0])
         # delete all reports from db and from work controller before first question
         work_group = DBController.get_group({'channel': group_channel})
-        work_group.clean_reports()
-        work_group.update_ts(Utils.set_report_ts(self.slack_client, work_group.channel))
-        DBController.update_reports(work_group)
+        Utils.remove_work_group(self.slack_client, work_group)
         self.works_report_controller.clean_reports()
 
         for user in users:

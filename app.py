@@ -33,7 +33,6 @@ commands = ['/q', '/init', '/start', '/stop']
 global works_report_controller
 
 works_report_controller = WorksReportController()
-schedule_controller = ScheduleController(slack_client, works_report_controller)
 
 
 @app.route('/', methods=['GET'])
@@ -216,7 +215,13 @@ def _message_handler(message_event):
                                                       inclusive=True)
         question, answer = get_qa(conversations_history)
         print('QUESTION: ', question, 'ANSWER: ', answer)
-        if answer:
+        if user in works_report_controller.reports:
+            previous_questions = [cell.question for cell in works_report_controller.reports[user]]
+        else:
+            previous_questions = []
+
+        print(f'PREVIOUS Q for USER {user}: {previous_questions}')
+        if answer and question not in previous_questions:
             attachments = works_report_controller.remember_answer(answer=answer,
                                                                   question=question,
                                                                   user_id=user,
