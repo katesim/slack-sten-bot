@@ -100,7 +100,7 @@ def start_questionnaire(work_group_id=0):
 
     work_group = DBController.get_group({'serial_id': work_group_id})
     # delete all reports from db and from work controller before first question
-    Utils.remove_work_group(slack_client, work_group)
+    Utils.clear_reports_work_group(slack_client, work_group)
 
     works_report_controller.clean_reports()
     for u in work_group.users:

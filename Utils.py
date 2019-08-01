@@ -31,7 +31,7 @@ class Utils:
         return ts
 
     @staticmethod
-    def remove_work_group(slack_client, work_group):
+    def clear_reports_work_group(slack_client, work_group):
         work_group.clean_reports()
         work_group.update_ts(Utils.set_report_ts(slack_client, work_group.channel))
         print("REMOVE WG ")
