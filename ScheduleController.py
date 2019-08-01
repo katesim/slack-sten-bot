@@ -59,12 +59,10 @@ class ScheduleController:
     def schedule_no_answer(self, group_channel, users, times):
 
         print("FORM REPORT")
-        # add report into group channel gor every report day
+        # add report into group channel for every report day
         for weekday in times.keys():  # time in times:
             time, weekday = self.plus_hours(times[weekday], int(weekday), hour_shift=2)
-            # weekday=2
             # weekday="0"
-
             # time = self.plus_minutes(time, 2)
             time = self.formatted_time(time)
             print("ADD SCHEDULE REPORT JOB FOR DAY", weekday)
@@ -117,7 +115,6 @@ class ScheduleController:
             print("USER", user)
             print("SEND QUESTION MESSAGE FOR MEMBER", user.user_id)
 
-            # works_report_controller = WorksReportController()
             self.slack_client.api_call("chat.postMessage",
                                        channel=user.im_channel,
                                        text=attachments[0],

@@ -83,7 +83,7 @@ def message_actions():
                                   attachments=[]  # empty `attachments` to clear the existing massage attachments
                                   )
             slack_client.api_call("chat.postMessage",
-                                  channel="CL67NCJ0J",  # work_group.channel,  # TODO отправлять в тред РГ
+                                  channel=work_group.channel,
                                   text=attachments[0],
                                   attachments=attachments[1],
                                   thread_ts=work_group.ts_reports)
@@ -130,7 +130,7 @@ def _command_handler(channel, message):
             DBController.add_group(dict(
                 channel="CL67NCJ0J",  # test channel
                 users=[('UHTJL2NKZ', slack_client.api_call("im.open", user='UHTJL2NKZ')['channel'].get('id'))],
-                # ('UHTJL2NKZ', slack_client.api_call("im.open", user='UHTJL2NKZ')['channel'].get('id'))],
+                # ('UL4D3C0HG', slack_client.api_call("im.open", user='UL4D3C0HG')['channel'].get('id'))],
                 times={'0': '17:00'}))
 
             slack_client.api_call("chat.postMessage",
