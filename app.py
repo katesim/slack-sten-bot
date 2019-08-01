@@ -87,8 +87,6 @@ def message_actions():
                                   text=attachments[0],
                                   attachments=attachments[1],
                                   thread_ts=work_group.ts_reports)
-            # works_report_controller.forgot_old_report(user)
-
             # Send an HTTP 200 response with empty body so Slack knows we're done here
             return make_response("", 200)
         return make_response("", 200)
