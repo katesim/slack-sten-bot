@@ -129,9 +129,6 @@ def _command_handler(channel, message):
             # TODO заполнить из странички-админки
             DBController.add_group(dict(
                 channel="CL67NCJ0J",  # test channel
-                # users=[('UL4D3C0HG', slack_client.api_call("im.open", user='UL4D3C0HG')['channel'].get('id')),
-                #  ('UHTJL2NKZ', slack_client.api_call("im.open", user='UHTJL2NKZ')['channel'].get('id'))],
-                # times={'1': '10:00', "3":"10:00"}))
                 users=[('UHTJL2NKZ', slack_client.api_call("im.open", user='UHTJL2NKZ')['channel'].get('id'))],
                 # ('UHTJL2NKZ', slack_client.api_call("im.open", user='UHTJL2NKZ')['channel'].get('id'))],
                 times={'0': '17:00'}))
@@ -180,14 +177,8 @@ def _message_handler(message_event):
 
         question, answer = get_qa(conversations_history)
         print('QUESTION: ', question, 'ANSWER: ', answer)
-
-        if user in works_report_controller.reports:
-            previous_questions = [cell.question for cell in works_report_controller.reports[user]]
-        else:
-            previous_questions = []
-
-        print(f'PREVIOUS Q for USER {user}: {previous_questions}')
-        if answer and question not in previous_questions:
+        
+        if question in works_report_controller.questions:
             attachments = works_report_controller.remember_answer(answer=answer,
                                                                   question=question,
                                                                   user_id=user,
@@ -221,17 +212,17 @@ def _message_handler(message_event):
 
 
 def get_qa(conversations_history):
-    messages = [x['text'] for x in conversations_history['messages']][::-1]
-    print('LAST 3 MESSAGES', messages)
-    # TODO добавить проверку на бота
-    for index, message in enumerate(messages):
-        if message in WorksReportController().questions and conversations_history:
-            try:
-                if not messages[index + 1] in ScheduleController.reminder_message \
-                        and not messages[index + 1] in WorksReportController().questions:
-                    return message, messages[index + 1]
-            except:
-                return message, ''
+    if len(conversations_history['messages']) < 2:
+        return '', ''
+    messages = [(message['text'], message.get('subtype')) for message in conversations_history['messages']]
+    if messages[1][0] in WorksReportController().questions and messages[1][1] == 'bot_message':
+        return messages[1][0], messages[0][0]
+    if messages[1][0] == ScheduleController.reminder_message and messages[1][1] == 'bot_message':
+        try:
+            if messages[2][0] in WorksReportController().questions and messages[2][1] == 'bot_message':
+                return messages[2][0], messages[0][0]
+        except:
+            return '', ''
     return '', ''
 
 
