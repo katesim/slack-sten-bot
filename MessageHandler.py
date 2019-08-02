@@ -1,5 +1,6 @@
 import time
 from flask import make_response
+from collections import namedtuple
 
 from ScheduleController import ScheduleController
 from DBController import DBController
@@ -32,13 +33,15 @@ class MessageHandler:
     def get_qa(conversations_history):
         if len(conversations_history['messages']) < 2:
             return '', ''
-        messages = [(message['text'], message.get('subtype')) for message in conversations_history['messages']]
-        if messages[1][0] in WorksReportController().questions and messages[1][1] == 'bot_message':
-            return messages[1][0], messages[0][0]
-        if messages[1][0] == ScheduleController.reminder_message and messages[1][1] == 'bot_message':
+        Message = namedtuple('Message', 'text subtype')
+        messages = [Message(message['text'], message.get('subtype')) for message in conversations_history['messages']]
+        answer = messages[0].text
+        if messages[1].text in WorksReportController().questions and messages[1].subtype == 'bot_message':
+            return messages[1].text, answer
+        if messages[1].text == ScheduleController.reminder_message and messages[1].subtype == 'bot_message':
             try:
-                if messages[2][0] in WorksReportController().questions and messages[2][1] == 'bot_message':
-                    return messages[2][0], messages[0][0]
+                if messages[2].text in WorksReportController().questions and messages[2].subtype == 'bot_message':
+                    return messages[2].text, answer
             except:
                 return '', ''
         return '', ''
