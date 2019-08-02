@@ -22,7 +22,6 @@ class WorksReportController:
         self.question_counter = 0
 
     def remember_answer(self, question, answer, user_id, real_user_name, ts_answer):
-        self.question_counter += 1
         if not self.reports.get(user_id):
             self.reports[user_id] = [self.Cell(question, answer, ts_answer)]
         else:
@@ -35,6 +34,7 @@ class WorksReportController:
             self.question_counter = 0
             return self.create_report(real_user_name, user_id)
         try:
+            self.question_counter += 1
             return self.answer_menu(question=self.questions[len(self.reports[user_id])])
         except:
             self.question_counter = 0
