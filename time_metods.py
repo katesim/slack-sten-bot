@@ -60,3 +60,6 @@ def time_is_overlayed(*, duration_hours, duration_minutes, down_shift_hours, dow
     if duration_hours == down_shift_hours:
         return down_shift_minutes-duration_minutes >= 0
     return False
+
+def sort_times(times):
+    return sorted(times)
