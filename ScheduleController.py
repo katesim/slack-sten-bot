@@ -5,6 +5,7 @@ import os
 from time_metods import plus_hours, formatted_time
 from DBController import DBController
 from Utils import Utils
+from WorksReportController import ReportState
 
 YOUR_DIRECT_CHANNEL = os.environ.get("YOUR_DIRECT_CHANNEL")
 YOUR_USER_ID = os.environ.get("YOUR_USER_ID")
@@ -53,7 +54,7 @@ class ScheduleController:
         reports = work_group.reports
         for user in users:
             report_status = self.works_report_controller.get_report_status(reports.get(user.user_id))
-            if report_status == "empty" or report_status == "incomplete":
+            if report_status == ReportState.EMPTY or report_status == ReportState.INCOMPLETE:
                 self.slack_client.api_call("chat.postMessage",
                                            channel=user.im_channel,
                                            text=self.reminder_message)
@@ -78,7 +79,7 @@ class ScheduleController:
             real_user_name = Utils.get_real_user_name(self.slack_client, user.user_id)
             report_status = self.works_report_controller.get_report_status(reports.get(user.user_id))
             # has answer
-            if report_status == "incomplete":
+            if report_status == ReportState.INCOMPLETE:
                 text, attachment = self.works_report_controller.create_report(real_user_name, user.user_id)
                 self.slack_client.api_call("chat.postMessage",
                                            channel=user.user_id,
@@ -88,7 +89,7 @@ class ScheduleController:
                                            text=text,
                                            attachments=attachment,
                                            thread_ts=work_group.ts_reports)
-            if report_status == "empty":
+            if report_status == ReportState.EMPTY:
                 text, attachment = self.works_report_controller.create_report(real_user_name, user.user_id,
                                                                               self.no_answer_message)
                 self.slack_client.api_call("chat.postMessage",
