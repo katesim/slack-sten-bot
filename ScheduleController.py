@@ -2,7 +2,7 @@ import schedule
 import time
 import os
 
-from time_metods import plus_hours, formatted_time
+from time_metods import plus_time, minus_time, formatted_time
 from DBController import DBController
 from Utils import Utils
 from WorksReportController import ReportState
@@ -41,7 +41,7 @@ class ScheduleController:
         # add reminder for every report day
         for weekday in times.keys():  # time in times:
             # calculate time for reminder
-            time, weekday = plus_hours(times[weekday], int(weekday), hour_shift=1)
+            time, weekday = plus_time(time=times[weekday], weekday=int(weekday), hour_shift=1, minute_shift=0)
             # weekday="0"
             # time = self.plus_minutes(time, 1)
             time = formatted_time(time)
@@ -64,7 +64,7 @@ class ScheduleController:
         print("FORM REPORT")
         # add report into group channel for every report day
         for weekday in times.keys():  # time in times:
-            time, weekday = plus_hours(times[weekday], int(weekday), hour_shift=2)
+            time, weekday = plus_time(time=times[weekday], weekday=int(weekday), hour_shift=2, minute_shift=0)
             # weekday="0"
             # time = self.plus_minutes(time, 2)
             time = formatted_time(time)
