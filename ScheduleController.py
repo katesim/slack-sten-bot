@@ -2,7 +2,7 @@ import schedule
 import time
 import os
 
-from WorkGroup import WorkGroup
+from time_metods import plus_hours, formatted_time
 from DBController import DBController
 from Utils import Utils
 
@@ -40,10 +40,10 @@ class ScheduleController:
         # add reminder for every report day
         for weekday in times.keys():  # time in times:
             # calculate time for reminder
-            time, weekday = self.plus_hours(times[weekday], int(weekday), hour_shift=1)
+            time, weekday = plus_hours(times[weekday], int(weekday), hour_shift=1)
             # weekday="0"
             # time = self.plus_minutes(time, 1)
-            time = self.formatted_time(time)
+            time = formatted_time(time)
             print("ADD SCHEDULE REMINDER JOB FOR DAY", weekday)
             self.add_scheduled_job(time, int(weekday), self.send_reminder_messages, group_channel, users)
 
@@ -63,10 +63,10 @@ class ScheduleController:
         print("FORM REPORT")
         # add report into group channel for every report day
         for weekday in times.keys():  # time in times:
-            time, weekday = self.plus_hours(times[weekday], int(weekday), hour_shift=2)
+            time, weekday = plus_hours(times[weekday], int(weekday), hour_shift=2)
             # weekday="0"
             # time = self.plus_minutes(time, 2)
-            time = self.formatted_time(time)
+            time = formatted_time(time)
             print("ADD SCHEDULE REPORT JOB FOR DAY", weekday)
             self.add_scheduled_job(time, int(weekday), self.finish_questionnaire, group_channel, users)
 
@@ -106,7 +106,7 @@ class ScheduleController:
         # start questionnare in every report day
         for weekday in times.keys():  # time in times:#
             # weekday="0"
-            time = self.formatted_time(times[weekday])
+            time = formatted_time(times[weekday])
             # time = self.formatted_time(time)
             print("ADD SCHEDULE QUESTIONNARE JOB FOR DAY", weekday)
             self.add_scheduled_job(time, int(weekday), self.send_question_messages, group_channel, users)
@@ -130,53 +130,6 @@ class ScheduleController:
 
     def stop_all(self):
         schedule.clear()
-
-    # calculate time for reminder message (1 hour earlier)
-    def minus_hours(self, time, weekday, hour_shift=1):
-        assert ":" in time, "time format should be hh:mm or h:mm"
-        assert hour_shift < 24, "too much time shift"
-
-        hour, minute = [int(value) for value in time.split(":")]
-        new_hour = (hour - hour_shift) % 24
-        if new_hour > hour:
-            weekday = (weekday - 1) % 7
-        new_time = "{}:{}".format(new_hour, minute)
-        return new_time, weekday
-
-    # calculate time for report message (n hour later)
-    def plus_hours(self, time, weekday, hour_shift=3):
-        assert ":" in time, "time format should be hh:mm or h:mm"
-        assert hour_shift < 24, "too much time shift"
-
-        hour, minute = [int(value) for value in time.split(":")]
-        new_hour = (hour + hour_shift) % 24
-        if new_hour < hour:
-            weekday = (weekday + 1) % 7
-        new_time = "{}:{}".format(new_hour, minute)
-        return new_time, weekday
-
-    # TODO delete or modify this function
-    def plus_minutes(self, time, minute_shift):
-        assert ":" in time, "time format should be hh:mm or h:mm"
-
-        hour, minute = [int(value) for value in time.split(":")]
-        minute += minute_shift
-        return "{}:{}".format(hour, minute)
-
-    # formatting time for schedule 
-    def formatted_time(self, time):
-        assert ":" in time, "time format should be hh:mm or h:mm"
-
-        hour, minute = time.split(":")
-        len_hour = len(hour)
-        len_minute = len(minute)
-        assert 3 > len_hour > 0, "invalid hour format"
-        assert 3 > len_minute > 0, "invalid minute format"
-        if len_hour < 2:
-            hour = "0{}".format(hour)
-        if len_minute < 2:
-            minute = "0{}".format(minute)
-        return "{}:{}".format(hour, minute)
 
     # parse day number and start scheduler with job
     # could be used for different tasks
