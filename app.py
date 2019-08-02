@@ -6,25 +6,19 @@ from slackeventsapi import SlackEventAdapter
 import schedule
 import time
 from pprint import pprint
-from collections import namedtuple
 
 from WorksReportController import WorksReportController
-from InitController import InitController
 from DBController import DBController
 from ScheduleController import ScheduleController
-
-init_controller = InitController()
+from Utils import Utils
 
 app = Flask(__name__)
 
 # Your app's Slack bot user token
 SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN")
 SIGNING_SECRET = os.environ.get("SIGNING_SECRET")
-# hotfix variable to catch bot mentioning
+# TODO delete hotfix variable to catch bot mentioning
 BOT_MENTIONED = os.environ.get("BOT_MENTIONED")
-# hotfix TODO delete hardcode ids
-YOUR_DIRECT_CHANNEL = os.environ.get("YOUR_DIRECT_CHANNEL")
-YOUR_USER_ID = os.environ.get("YOUR_USER_ID")
 
 # Slack client for Web API requests
 slack_client = SlackClient(SLACK_BOT_TOKEN)
@@ -33,13 +27,10 @@ slack_events_adapter = SlackEventAdapter(SIGNING_SECRET, "/slack/events", app)
 schedule.run_continuously()
 
 # List of commands for bot
-commands = ['/q', '/init', '/start', '/stop']
+commands = ['/q', '/init', '/stop']
 
 global works_report_controller
-global schedule_controller
-
 works_report_controller = WorksReportController()
-schedule_controller = ScheduleController(slack_client, works_report_controller)
 
 
 @app.route('/', methods=['GET'])
@@ -50,9 +41,8 @@ def webhook():
 # The endpoint Slack will load your menu options from
 @app.route("/slack/message_options", methods=["POST"])
 def message_options():
-    global works_report_controller
     # Dictionary of menu options which will be sent as JSON
-    menu_options = works_report_controller.take_menu_options()
+    menu_options = WorksReportController().take_menu_options()
     # Load options dict as JSON and respond to Slack
     return Response(json.dumps(menu_options), mimetype='application/json')
 
@@ -63,7 +53,7 @@ def message_actions():
     global time
     global works_report_controller
     form_json = json.loads(request.form["payload"])
-    print('\n\n\nPAYLOAD:\n', form_json["type"], '\n\n\n\n')
+    print(f'\n\n\nPAYLOAD:\n{form_json["type"]} \n\n\n\n')
     pprint(form_json)
 
     channel = form_json["channel"]["id"]
@@ -78,91 +68,49 @@ def message_actions():
                 question=works_report_controller.questions[works_report_controller.question_counter],
                 answer=short_answer,
                 user_id=user,
-                real_user_name=get_real_user_name(user),
+                real_user_name=Utils.get_real_user_name(slack_client, user),
                 ts_answer=time.time())
 
             work_group = DBController.get_group({'serial_id': 0})
             work_group.update_reports(reports=works_report_controller.reports)
             DBController.update_reports(work_group)
-            #work_group.update_ts(ts_reports=works_report_controller.ts_report)
+            # work_group.update_ts(ts_reports=works_report_controller.ts_report)
 
-            slack_client.api_call(
-                "chat.update",
-                channel=channel,
-                ts=form_json["message_ts"],
-                text="Your answer is {}  :coffee:".format(short_answer),
-                attachments=[]  # empty `attachments` to clear the existing massage attachments
-            )
+            slack_client.api_call("chat.update",
+                                  channel=channel,
+                                  ts=form_json["message_ts"],
+                                  text="Your answer is {}  :coffee:".format(short_answer),
+                                  attachments=[]  # empty `attachments` to clear the existing massage attachments
+                                  )
             slack_client.api_call("chat.postMessage",
-                                  channel= "CL67NCJ0J",#work_group.channel,  # TODO отправлять в тред РГ
+                                  channel=work_group.channel,
                                   text=attachments[0],
                                   attachments=attachments[1],
                                   thread_ts=work_group.ts_reports)
-            #works_report_controller.forgot_old_report(user)
-
             # Send an HTTP 200 response with empty body so Slack knows we're done here
             return make_response("", 200)
-
-        if form_json['actions'][0]['name'] == "init_standup":
-            # open_dialog = slack_client.api_call(
-            #     "dialog.open",
-            #     trigger_id=form_json["trigger_id"],
-            #     dialog=init_controller.create_dialog(form_json["channel"]["id"])
-            # )
-            #
-            # print('\nopen_dialog: ', open_dialog)
-            #
-            # # Update the message to show that we're in the process of taking their order
-            # slack_client.api_call(
-            #     "chat.update",
-            #     channel=channel,
-            #     ts=form_json["message_ts"],
-            #     text=":pencil: Note your answers"
-            # )
-            #
-            # send_message(_channel, 'Whom to invite?')
-
-            return make_response("", 200)
-
-    elif form_json["type"] == "dialog_submission":
-        print("FORM response_url", form_json['response_url'])
-        submission = form_json.get("submission")
-        time, group_channel = get_menu_answers(submission)
         return make_response("", 200)
-    
-def get_menu_answers(submission):
-    time = None
-    group_channel = None
-    if submission:
-        time = submission.get("meal_preferences")
-        group_channel = submission.get("channel_notify")
-    print("TIME:", time, "CHANNEL:", group_channel)
-    return time, group_channel
+
 
 def start_questionnaire(work_group_id=0):
-    global works_report_controller
-    attachments = works_report_controller.answer_menu(works_report_controller.questions[0])
+    attachments = WorksReportController.answer_menu(WorksReportController().questions[0])
 
-    # delete all reports from db and from work controller before first question
     work_group = DBController.get_group({'serial_id': work_group_id})
-    work_group.clean_reports()
-    work_group.update_ts(set_report_ts(work_group.channel))
-    # print("REMOVE WG ")
-    # pprint(work_group.reports)
-    DBController.update_reports(work_group)
+    # delete all reports from db and from work controller before first question
+    Utils.clear_reports_work_group(slack_client, work_group)
 
     works_report_controller.clean_reports()
     for u in work_group.users:
         slack_client.api_call("chat.postMessage",
-                                channel=u.im_channel,
-                                text=attachments[0],
-                                attachments=attachments[1])
+                              channel=u.im_channel,
+                              text=attachments[0],
+                              attachments=attachments[1])
 
 
-def _command_handler(channel, user, message):
+def _command_handler(channel, message):
     global works_report_controller
-    global schedule_controller
 
+    schedule_controller = ScheduleController(slack_client, works_report_controller)
     message_words = message.split()
     if commands[0] in message_words:
         print(commands[0], message)
@@ -170,7 +118,7 @@ def _command_handler(channel, user, message):
                               channel=channel,
                               text="command q")
         start_questionnaire()
-        
+
         return True
 
     if commands[1] in message_words:
@@ -178,40 +126,23 @@ def _command_handler(channel, user, message):
         if not DBController.get_group({'serial_id': 0}):
             # TODO заполнить из странички-админки
             DBController.add_group(dict(
-                channel="CL67NCJ0J", # test channel
-                # users=[('UL4D3C0HG', slack_client.api_call("im.open", user='UL4D3C0HG')['channel'].get('id')),
-                #  ('UHTJL2NKZ', slack_client.api_call("im.open", user='UHTJL2NKZ')['channel'].get('id'))],
-                # times={'1': '10:00', "3":"10:00"}))
-                users=[('UL4D3C0HG', slack_client.api_call("im.open", user='UL4D3C0HG')['channel'].get('id')),
-                ('UHTJL2NKZ', slack_client.api_call("im.open", user='UHTJL2NKZ')['channel'].get('id'))],
+                channel="CL67NCJ0J",  # test channel
+                users=[('UHTJL2NKZ', slack_client.api_call("im.open", user='UHTJL2NKZ')['channel'].get('id'))],
+                # ('UL4D3C0HG', slack_client.api_call("im.open", user='UL4D3C0HG')['channel'].get('id'))],
                 times={'0': '17:00'}))
 
-            slack_client.api_call(
-                "chat.postMessage",
-                channel=channel,
-                text="Add group to database"
-            )
-
             slack_client.api_call("chat.postMessage",
-                                channel=channel,
-                                text="Init new standUP",
-                                attachments=[])
+                                  channel=channel,
+                                  text="Add group to database and Init new standUP"
+                                  )
+
             # INIT STANDUP SCHEDULE FOR WORKGROUP
             work_group = DBController.get_group({'serial_id': 0})
             schedule_controller.schedule_StandUp(group_channel=work_group.channel)
         return True
 
     if commands[2] in message_words:
-        print(commands[2], message)
-        print('SCHEDULE START')
-        # TODO take group channel
-        work_group = DBController.get_group({'serial_id': 0})
-        schedule_controller.schedule_StandUp(group_channel=work_group.channel)
-        return True
-
-    if commands[3] in message_words:
-        print(commands[3], message)
-        print('SCHEDULE STOP')
+        print(commands[2], message, '\nSCHEDULE STOP')
         schedule_controller.stop_all()
         return True
 
@@ -235,24 +166,28 @@ def _message_handler(message_event):
             print("USER SELECTED SHORT ANSWER")
 
     if user:
-        real_user_name = get_real_user_name(user)
         print("USER ID", user)
-        # предыдущее вопрос?
-        current_message, previous_message = _take_answer(message_event)
-        #print('current_message, previous_message', current_message, previous_message)
-        if previous_message in WorksReportController().questions:
-            print("BEFORE REMEMBER ANSWER")
-            pprint(works_report_controller.reports)
-            attachments = works_report_controller.remember_answer(answer=current_message,
-                                                                  question=previous_message,
+        conversations_history = slack_client.api_call("conversations.history",
+                                                      channel=channel,
+                                                      latest=str(time.time()),
+                                                      limit=3,
+                                                      inclusive=True)
+
+        question, answer = get_qa(conversations_history)
+        print('QUESTION: ', question, 'ANSWER: ', answer)
+        
+        if question in works_report_controller.questions:
+            attachments = works_report_controller.remember_answer(answer=answer,
+                                                                  question=question,
                                                                   user_id=user,
-                                                                  real_user_name=real_user_name,
+                                                                  real_user_name=Utils.get_real_user_name(slack_client,
+                                                                                                          user),
                                                                   ts_answer=time.time())
-            
+
             work_group = DBController.get_group({'serial_id': 0})
             work_group.update_reports(reports=works_report_controller.reports)
             DBController.update_reports(work_group)
-    
+
             if 'New report' == attachments[0]:
 
                 slack_client.api_call("chat.postMessage",
@@ -261,61 +196,39 @@ def _message_handler(message_event):
                                       attachments=[])
 
                 slack_client.api_call("chat.postMessage",
-                                  channel=work_group.channel,
-                                  text=attachments[0],
-                                  attachments=attachments[1],
-                                  thread_ts = work_group.ts_reports)
+                                      channel=work_group.channel,
+                                      text=attachments[0],
+                                      attachments=attachments[1],
+                                      thread_ts=work_group.ts_reports)
 
             else:
                 slack_client.api_call("chat.postMessage",
-                                    channel=channel,  # отправлять следующий вопрос в личку
-                                    text=attachments[0],
-                                    attachments=attachments[1])
+                                      channel=channel,  # отправлять следующий вопрос в личку
+                                      text=attachments[0],
+                                      attachments=attachments[1])
     return make_response("Message Sent", 200, )
 
-def set_report_ts(output_channel):
-    response = slack_client.api_call("chat.postMessage",
-                                channel = output_channel,
-                                text = "Update for {} WorkGroup".format(output_channel))
-    ts = response["message"]["ts"]
-    return ts
 
-def get_real_user_name(user_id):
-    user_info = slack_client.api_call("users.info", user=user_id)
-    real_user_name = "user"
-    if user_info.get("ok"):
-        real_user_name = user_info.get("user").get("real_name")
-        print('REAL NAME :', real_user_name, 'USER ID :', user_id)
-    return real_user_name
-
-def _take_answer(slack_event):
-    channel = slack_event["channel"]
-    answer = None
-    question = None
-    conversations_history = slack_client.api_call("conversations.history",
-                                                    channel=channel,
-                                                    latest=str(time.time()),
-                                                    limit=3,
-                                                    inclusive=True)
-    
-    if conversations_history.get("ok"):
-        answer = conversations_history['messages'][0]['text']
-        previous = conversations_history['messages'][1]['text']
-        preprevious = conversations_history['messages'][2]['text']
-        if previous == "There's one hour left until the end of the StandUp.":
-            print('Вопрос: ', question)
-            print('Ответ: ', answer)
-            return answer, preprevious
-    return answer, previous
+def get_qa(conversations_history):
+    if len(conversations_history['messages']) < 2:
+        return '', ''
+    messages = [(message['text'], message.get('subtype')) for message in conversations_history['messages']]
+    if messages[1][0] in WorksReportController().questions and messages[1][1] == 'bot_message':
+        return messages[1][0], messages[0][0]
+    if messages[1][0] == ScheduleController.reminder_message and messages[1][1] == 'bot_message':
+        try:
+            if messages[2][0] in WorksReportController().questions and messages[2][1] == 'bot_message':
+                return messages[2][0], messages[0][0]
+        except:
+            return '', ''
+    return '', ''
 
 
 def _first_message(channel):
+    message = f'Hello! :hand:\nAvailable commands:*{commands[0]}* - _send questions_\n*{commands[1]}* - _init new task'
     return slack_client.api_call("chat.postMessage",
                                  channel=channel,
-                                 text=str('Hello! :hand: '
-                                          '\nAvailable commands:'
-                                          '\n *' + commands[0] + '* - _send questions_'
-                                          '\n *' + commands[1] + '* - _init new task_'))
+                                 text=message)
 
 
 # bot mentioning in channel
@@ -326,6 +239,7 @@ def app_mention(event):
     channel = event["event"]["channel"]
     _first_message(channel)
 
+
 # process direct bot message
 @slack_events_adapter.on('message')
 def message(event):
@@ -334,34 +248,23 @@ def message(event):
     channel_type = message_event.get("channel_type")
     subtype = message_event.get("subtype")
 
-    print("SUBTYPE", subtype)
+    print(f"SUBTYPE: {subtype} \n")
 
-    #pprint(event)
-    print("\n")
     # ============= MESSAGE FROM USER ============= #
-    if subtype == None:#!= "bot_message":
-
+    if subtype is None:  # != "bot_message":
         channel = message_event["channel"]
-        # im means direct messages
-        if channel_type == "im":
-
-            user = message_event.get("user")
+        if channel_type == "im":  # im means direct messages
             message = message_event.get("text")
-
-            # bot mentioning implies command
             if str(BOT_MENTIONED) in message:
                 print("BOT WAS MENTIONED IN DIRECT MESSAGE FROM USER", "\n")
-                _command_handler(channel, user, message)
+                _command_handler(channel, message)
             else:
                 print("DIRECT MESSAGE FROM USER TO BOT")
                 _message_handler(message_event)
         else:
             print("CHANNEL MESSAGE FROM USER")
-
-    if subtype == "bot_message" and message_event.get("attachments") != None:
+    if subtype == "bot_message" and message_event.get("attachments") is not None:
         print("BOT INTERACTIVE MESSAGE")
-        # pprint(event)
-        # _bot_interactive_message_handler(message_event)
 
 
 @slack_events_adapter.on('bot_added')
@@ -373,16 +276,7 @@ def bot_added(event):
     _first_message(channel)
 
 
-def check_db_status():
-    db_len = 0
-    for _ in DBController.get_all_groups():
-        db_len += 1
-    if db_len == 0:
-        print('First setup database...')
-        DBController.first_setup()
-
-
 if __name__ == '__main__':
-    check_db_status()
+    DBController.check_db_status()
     port = int(os.getenv('PORT', 5000))
     app.run(debug=False, port=port, host='0.0.0.0')
