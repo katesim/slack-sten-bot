@@ -1,4 +1,4 @@
-def minus_time(*, time, weekday, hour_shift, minute_shift):
+def minus_time(*, time, weekday, hour_shift=0, minute_shift=0):
     # calculate time minus hour_shift hours and minute_shift minutes
     assert ":" in time, "time format should be hh:mm or h:mm or hh:m or h:m"
     assert hour_shift < 24, "too much hour shift"
@@ -19,7 +19,7 @@ def minus_time(*, time, weekday, hour_shift, minute_shift):
     return new_time, weekday
 
 
-def plus_time(*, time, weekday, hour_shift, minute_shift):
+def plus_time(*, time, weekday, hour_shift=0, minute_shift=0):
     # calculate time plus hour_shift hours and minute_shift minutes
     assert ":" in time, "time format should be hh:mm or h:mm"
     assert hour_shift < 24, "too much time shift"
@@ -54,7 +54,7 @@ def formatted_time(time):
         minute = "0{}".format(minute)
     return "{}:{}".format(hour, minute)
 
-def time_is_overlayed(*, duration_hours, duration_minutes, down_shift_hours, down_shift_minutes):
+def time_is_overlayed(*, duration_hours=0, duration_minutes=0, down_shift_hours=0, down_shift_minutes=0):
     if down_shift_hours-duration_hours > 0:
         return True
     if duration_hours == down_shift_hours:
@@ -63,3 +63,17 @@ def time_is_overlayed(*, duration_hours, duration_minutes, down_shift_hours, dow
 
 def sort_times(times):
     return sorted(times)
+
+def get_time_difference(time1, time2):
+    assert ":" in time1, "first time format should be hh:mm or h:mm"
+    assert ":" in time2, "second time format should be hh:mm or h:mm"
+
+
+    hour1, minute1 = [int(value) for value in time1.split(":")]
+    hour2, minute2 = [int(value) for value in time2.split(":")]
+    hour_dif = abs(hour1 - hour2)
+    minute_dif = abs(minute1 - minute2)
+    return "{}:{}".format(hour_dif, minute_dif)
+
+
+
