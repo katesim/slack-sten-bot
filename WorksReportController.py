@@ -1,7 +1,13 @@
 import time
 from collections import namedtuple
 from pprint import pprint
+from enum import Enum
 
+class ReportState(Enum):
+    EMPTY = 0
+    SHORT = 1
+    INCOMPLETE = 2
+    COMPLETE = 3
 
 class WorksReportController:
     def __init__(self, questions=None, short_answers=None):
@@ -22,7 +28,6 @@ class WorksReportController:
         self.question_counter = 0
 
     def remember_answer(self, question, answer, user_id, real_user_name, ts_answer):
-        self.question_counter += 1
         if not self.reports.get(user_id):
             self.reports[user_id] = [self.Cell(question, answer, ts_answer)]
         else:
@@ -35,6 +40,7 @@ class WorksReportController:
             self.question_counter = 0
             return self.create_report(real_user_name, user_id)
         try:
+            self.question_counter += 1
             return self.answer_menu(question=self.questions[len(self.reports[user_id])])
         except:
             self.question_counter = 0
@@ -62,21 +68,19 @@ class WorksReportController:
         print("REPORTS FOR USER", reports)
         short_answers = [pair[1] for pair in self.short_answers]
         if reports:
-            print("FIRST REPORT", reports[0][1])
-            print("SHORT ANSWERS", self.short_answers)
             if len(reports) != len(self.questions):
                 if reports[0][1] in short_answers:
                     print("STATUS short")
-                    return "short"
+                    return ReportState.SHORT
                 else:
                     print("STATUS incomplete")
-                    return "incomplete"
+                    return ReportState.INCOMPLETE
             else:
                 print("STATUS complete")
-                return "complete"
+                return ReportState.COMPLETE
         else:
             print("STATUS empty")
-            return "empty"
+            return ReportState.EMPTY
 
     def clean_reports(self):
         self.reports = {}
