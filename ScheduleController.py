@@ -46,7 +46,7 @@ class ScheduleController:
             # time = self.plus_minutes(time, 1)
             time = formatted_time(time)
             print("ADD SCHEDULE REMINDER JOB FOR DAY", weekday)
-            self.add_scheduled_job(time, int(weekday), self.send_reminder_messages, group_channel, users)
+            self.add_scheduled_job(time, int(weekday), self.send_reminder_messages, [group_channel], group_channel, users)
 
     def send_reminder_messages(self, group_channel, users):
         # need actual info
@@ -69,7 +69,7 @@ class ScheduleController:
             # time = self.plus_minutes(time, 2)
             time = formatted_time(time)
             print("ADD SCHEDULE REPORT JOB FOR DAY", weekday)
-            self.add_scheduled_job(time, int(weekday), self.finish_questionnaire, group_channel, users)
+            self.add_scheduled_job(time, int(weekday), self.finish_questionnaire, [group_channel], group_channel, users)
 
     def finish_questionnaire(self, group_channel, users):
         # if empty send no answer
@@ -110,7 +110,7 @@ class ScheduleController:
             time = formatted_time(times[weekday])
             # time = self.formatted_time(time)
             print("ADD SCHEDULE QUESTIONNARE JOB FOR DAY", weekday)
-            self.add_scheduled_job(time, int(weekday), self.send_question_messages, group_channel, users)
+            self.add_scheduled_job(time, int(weekday), self.send_question_messages, [group_channel], group_channel, users)
 
     def send_question_messages(self, group_channel, users):
 
@@ -134,16 +134,16 @@ class ScheduleController:
 
     # parse day number and start scheduler with job
     # could be used for different tasks
-    def add_scheduled_job(self, time, day, job, *args):
+    def add_scheduled_job(self, time, day, job, tags, *args):
         assert 0 <= day < 7, "invalid day value"
         # Now monday day for tests
         {
-            0: lambda job, *args: schedule.every().monday.at(time).do(job, *args),
+            0: lambda job, *args: schedule.every().monday.at(time).do(job, *args).tag(*tags),
             # schedule.every(20).seconds.do(job, *args), #
-            1: lambda job, *args: schedule.every().tuesday.at(time).do(job, *args),
-            2: lambda job, *args: schedule.every().wednesday.at(time).do(job, *args),
-            3: lambda job, *args: schedule.every().thursday.at(time).do(job, *args),
-            4: lambda job, *args: schedule.every().friday.at(time).do(job, *args),
-            5: lambda job, *args: schedule.every().saturday.at(time).do(job, *args),
-            6: lambda job, *args: schedule.every().sunday.at(time).do(job, *args)
+            1: lambda job, *args: schedule.every().tuesday.at(time).do(job, *args).tag(*tags),
+            2: lambda job, *args: schedule.every().wednesday.at(time).do(job, *args).tag(*tags),
+            3: lambda job, *args: schedule.every().thursday.at(time).do(job, *args).tag(*tags),
+            4: lambda job, *args: schedule.every().friday.at(time).do(job, *args).tag(*tags),
+            5: lambda job, *args: schedule.every().saturday.at(time).do(job, *args).tag(*tags),
+            6: lambda job, *args: schedule.every().sunday.at(time).do(job, *args).tag(*tags)
         }[day](job, *args)
