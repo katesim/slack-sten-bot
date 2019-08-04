@@ -53,8 +53,8 @@ class ScheduleController:
         work_group = DBController.get_group({'channel': group_channel})
         reports = work_group.reports
         for user in users:
-            report_status = self.works_report_controller.get_report_status(reports.get(user.user_id))
-            if report_status == ReportState.EMPTY or report_status == ReportState.INCOMPLETE:
+            report_state = self.works_report_controller.get_report_state(reports.get(user.user_id))
+            if report_state == ReportState.EMPTY or report_state == ReportState.INCOMPLETE:
                 self.slack_client.api_call("chat.postMessage",
                                            channel=user.im_channel,
                                            text=self.reminder_message)
@@ -77,9 +77,9 @@ class ScheduleController:
         reports = work_group.reports
         for user in users:
             real_user_name = Utils.get_real_user_name(self.slack_client, user.user_id)
-            report_status = self.works_report_controller.get_report_status(reports.get(user.user_id))
+            report_state = self.works_report_controller.get_report_state(reports.get(user.user_id))
             # has answer
-            if report_status == ReportState.INCOMPLETE:
+            if report_state == ReportState.INCOMPLETE:
                 text, attachment = self.works_report_controller.create_report(real_user_name, user.user_id)
                 self.slack_client.api_call("chat.postMessage",
                                            channel=user.user_id,
@@ -89,7 +89,7 @@ class ScheduleController:
                                            text=text,
                                            attachments=attachment,
                                            thread_ts=work_group.ts_reports)
-            if report_status == ReportState.EMPTY:
+            if report_state == ReportState.EMPTY:
                 text, attachment = self.works_report_controller.create_report(real_user_name, user.user_id,
                                                                               self.no_answer_message)
                 self.slack_client.api_call("chat.postMessage",

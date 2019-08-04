@@ -64,7 +64,7 @@ class WorksReportController:
             }
         ])
 
-    def get_report_status(self, reports):
+    def get_report_state(self, reports):
         print("REPORTS FOR USER", reports)
         short_answers = [pair[1] for pair in self.short_answers]
         if reports:
