@@ -34,6 +34,18 @@ class ScheduleController:
         self.schedule_group_reminder(group_channel, users, times)
         self.schedule_completion(group_channel, users, times)
 
+    def delete_StandUp(self, group_channel):
+        # delete all schedule messages with workgroup tag
+        schedule.clear(group_channel)
+        # delete group from db
+        DBController.remove_groups({'channel': group_channel})
+        # TODO delete from queue
+
+    def update_StandUp(self, group_channel):
+        self.delete_StandUp(group_channel)
+        self.schedule_StandUp(group_channel)
+        # TODO delete from queue
+
     # send reminder message if member didn't answer any question
     def schedule_group_reminder(self, group_channel, users, times):
 
