@@ -79,7 +79,11 @@ class MessageHandler:
 
         if self.commands[2] in message_words:
             print(self.commands[2], message, '\nSCHEDULE STOP')
-            schedule_controller.stop_all()
+            if "all" in message_words:
+                schedule_controller.stop_all()
+                return make_response("", 200)
+            if "CL67NCJ0J" in message_words:
+                schedule_controller.delete_StandUp("CL67NCJ0J")
             return make_response("", 200)
 
         else:
