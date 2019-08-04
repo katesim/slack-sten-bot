@@ -63,9 +63,9 @@ class MessageHandler:
                 # TODO заполнить из странички-админки
                 DBController.add_group(dict(
                     channel="CL67NCJ0J",  # test channel
-                    users=[('UHTJL2NKZ', self.slack_client.api_call("im.open", user='UHTJL2NKZ')['channel'].get('id')),
-                           ('UL4D3C0HG', self.slack_client.api_call("im.open", user='UL4D3C0HG')['channel'].get('id'))],
-                    times={'0': '17:00'}))
+                    #users=[('UHTJL2NKZ', self.slack_client.api_call("im.open", user='UHTJL2NKZ')['channel'].get('id')),
+                    users=[('UL4D3C0HG', self.slack_client.api_call("im.open", user='UL4D3C0HG')['channel'].get('id'))],
+                    times={'6': '17:00'}))
 
                 self.slack_client.api_call("chat.postMessage",
                                            channel=channel,
