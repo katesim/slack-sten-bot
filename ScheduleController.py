@@ -81,7 +81,7 @@ class ScheduleController:
             if report_status == "incomplete":
                 text, attachment = self.works_report_controller.create_report(real_user_name, user.user_id)
                 self.slack_client.api_call("chat.postMessage",
-                                           channel=user.user_id,
+                                           channel=user.im_channel,
                                            text=self.times_up_message)
                 self.slack_client.api_call("chat.postMessage",
                                            channel=group_channel,
@@ -92,7 +92,7 @@ class ScheduleController:
                 text, attachment = self.works_report_controller.create_report(real_user_name, user.user_id,
                                                                               self.no_answer_message)
                 self.slack_client.api_call("chat.postMessage",
-                                           channel=user.user_id,
+                                           channel=user.im_channel,
                                            text=self.times_up_message)
                 self.slack_client.api_call("chat.postMessage",
                                            channel=group_channel,
