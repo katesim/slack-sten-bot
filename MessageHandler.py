@@ -35,6 +35,8 @@ class MessageHandler:
             return '', ''
         Message = namedtuple('Message', 'text subtype')
         messages = [Message(message['text'], message.get('subtype')) for message in conversations_history['messages']]
+        if messages[0].subtype == "bot_message":
+            return '', ''
         answer = messages[0].text
         if messages[1].text in WorksReportController().questions and messages[1].subtype == 'bot_message':
             return messages[1].text, answer
