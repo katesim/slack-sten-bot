@@ -217,6 +217,8 @@ def get_qa(conversations_history):
     if len(conversations_history['messages']) < 2:
         return '', ''
     messages = [(message['text'], message.get('subtype')) for message in conversations_history['messages']]
+    if messages[0][1] == "bot_message":
+        return '', '' 
     if messages[1][0] in WorksReportController().questions and messages[1][1] == 'bot_message':
         return messages[1][0], messages[0][0]
     if messages[1][0] == ScheduleController.reminder_message and messages[1][1] == 'bot_message':
