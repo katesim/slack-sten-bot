@@ -59,25 +59,28 @@ class ScheduleController:
             time = plus_time(time=time, weekday=int(weekday), minute_shift=1)[0]
             print("TIME!!!", time)
             time = formatted_time(time)
+
         # code for work
         # for weekday in times.keys():
         #     # calculate time for reminder
         #     time, weekday = plus_time(time=times[weekday], weekday=int(weekday), hour_shift=1)
         #     time = formatted_time(time)
-        
-            print("ADD SCHEDULE REMINDER JOB FOR DAY", weekday)
-            self.add_scheduled_job(time, int(weekday), self.send_reminder_messages, [group_channel], group_channel, users)
 
-    def send_reminder_messages(self, group_channel, users):
+            for user in users:
+                print("ADD SCHEDULE REMINDER JOB FOR DAY {} FOR USER {}".format(weekday, user.user_id))
+                # need to form schedule queue for every user
+                self.add_scheduled_job(time, int(weekday), self.send_reminder_messages, [group_channel], group_channel, user)
+
+        
+    def send_reminder_messages(self, group_channel, user):
         # need actual info
         work_group = DBController.get_group({'channel': group_channel})
         reports = work_group.reports
-        for user in users:
-            report_state = self.works_report_controller.get_report_state(reports.get(user.user_id))
-            if report_state == ReportState.EMPTY or report_state == ReportState.INCOMPLETE:
-                self.slack_client.api_call("chat.postMessage",
-                                           channel=user.im_channel,
-                                           text=self.reminder_message)
+        report_state = self.works_report_controller.get_report_state(reports.get(user.user_id))
+        if report_state == ReportState.EMPTY or report_state == ReportState.INCOMPLETE:
+            self.slack_client.api_call("chat.postMessage",
+                                        channel=user.im_channel,
+                                        text=self.reminder_message)
 
     def schedule_completion(self, group_channel, users, times):
 
@@ -87,43 +90,44 @@ class ScheduleController:
             weekday="6"
             time = plus_time(time=time, weekday=int(weekday), minute_shift=2)[0]
             time = formatted_time(time)
-
+        
         # for weekday in times.keys():  # time in times:
         #     time, weekday = plus_time(time=times[weekday], weekday=int(weekday), hour_shift=2)
         #     time = formatted_time(time)
 
-            print("ADD SCHEDULE REPORT JOB FOR DAY", weekday)
-            self.add_scheduled_job(time, int(weekday), self.finish_questionnaire, [group_channel], group_channel, users)
+            for user in users:
+                    print("ADD SCHEDULE REPORT JOB FOR DAY {} FOR USER {}".format(weekday, user.user_id))
+                    self.add_scheduled_job(time, int(weekday), self.finish_questionnaire, [group_channel], group_channel, user)
 
-    def finish_questionnaire(self, group_channel, users):
+
+    def finish_questionnaire(self, group_channel, user):
         # if empty send no answer
         work_group = DBController.get_group({'channel': group_channel})
         reports = work_group.reports
-        for user in users:
-            real_user_name = Utils.get_real_user_name(self.slack_client, user.user_id)
-            report_state = self.works_report_controller.get_report_state(reports.get(user.user_id))
-            # has answer
-            if report_state == ReportState.INCOMPLETE:
-                text, attachment = self.works_report_controller.create_report(real_user_name, user.user_id)
-                self.slack_client.api_call("chat.postMessage",
-                                           channel=user.im_channel,
-                                           text=self.times_up_message)
-                self.slack_client.api_call("chat.postMessage",
-                                           channel=group_channel,
-                                           text=text,
-                                           attachments=attachment,
-                                           thread_ts=work_group.ts_reports)
-            if report_state == ReportState.EMPTY:
-                text, attachment = self.works_report_controller.create_report(real_user_name, user.user_id,
-                                                                              self.no_answer_message)
-                self.slack_client.api_call("chat.postMessage",
-                                           channel=user.im_channel,
-                                           text=self.times_up_message)
-                self.slack_client.api_call("chat.postMessage",
-                                           channel=group_channel,
-                                           text=text,
-                                           attachments=attachment,
-                                           thread_ts=work_group.ts_reports)
+        real_user_name = Utils.get_real_user_name(self.slack_client, user.user_id)
+        report_state = self.works_report_controller.get_report_state(reports.get(user.user_id))
+        # has answer
+        if report_state == ReportState.INCOMPLETE:
+            text, attachment = self.works_report_controller.create_report(real_user_name, user.user_id)
+            self.slack_client.api_call("chat.postMessage",
+                                        channel=user.im_channel,
+                                        text=self.times_up_message)
+            self.slack_client.api_call("chat.postMessage",
+                                        channel=group_channel,
+                                        text=text,
+                                        attachments=attachment,
+                                        thread_ts=work_group.ts_reports)
+        if report_state == ReportState.EMPTY:
+            text, attachment = self.works_report_controller.create_report(real_user_name, user.user_id,
+                                                                            self.no_answer_message)
+            self.slack_client.api_call("chat.postMessage",
+                                        channel=user.im_channel,
+                                        text=self.times_up_message)
+            self.slack_client.api_call("chat.postMessage",
+                                        channel=group_channel,
+                                        text=text,
+                                        attachments=attachment,
+                                        thread_ts=work_group.ts_reports)
 
     def schedule_group_questionnaire(self, group_channel, users, times):
 
@@ -132,14 +136,15 @@ class ScheduleController:
         for time in times:
             weekday="6"
             time = formatted_time(time)
-        
+           
         # for weekday in times.keys():
         #     time = formatted_time(times[weekday])
-           
-            print("ADD SCHEDULE QUESTIONNARE JOB FOR DAY", weekday)
-            self.add_scheduled_job(time, int(weekday), self.send_question_messages, [group_channel], group_channel, users)
 
-    def send_question_messages(self, group_channel, users):
+            for user in users:
+                print("ADD SCHEDULE QUESTIONNARE JOB FOR DAY {} FOR USER {}".format(weekday, user.user_id))
+                self.add_scheduled_job(time, int(weekday), self.send_question_messages, [group_channel], group_channel, user)
+
+    def send_question_messages(self, group_channel, user):
 
         attachments = self.works_report_controller.answer_menu(self.works_report_controller.questions[0])
         # delete all reports from db and from work controller before first question
@@ -147,14 +152,11 @@ class ScheduleController:
         Utils.clear_reports_work_group(self.slack_client, work_group)
         self.works_report_controller.clean_reports()
 
-        for user in users:
-            print("USER", user)
-            print("SEND QUESTION MESSAGE FOR MEMBER", user.user_id)
-
-            self.slack_client.api_call("chat.postMessage",
-                                       channel=user.im_channel,
-                                       text=attachments[0],
-                                       attachments=attachments[1])
+        print("SEND QUESTION MESSAGE FOR MEMBER", user.user_id)
+        self.slack_client.api_call("chat.postMessage",
+                                    channel=user.im_channel,
+                                    text=attachments[0],
+                                    attachments=attachments[1])
 
     def stop_all(self):
         schedule.clear()
