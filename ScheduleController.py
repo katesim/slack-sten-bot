@@ -15,6 +15,7 @@ class ScheduleController:
     reminder_message = "StandUp will be over soon."
     no_answer_message = "No answer"
     times_up_message = "StandUp time's up."
+    questionnaire_header = "Hello, it's time for update on"
 
     def __init__(self, slack_client, works_report_controller):
         self.slack_client = slack_client
@@ -22,6 +23,7 @@ class ScheduleController:
         self.reminder_message = "There's one hour left until the end of the StandUp."
         self.no_answer_message = "No answer"
         self.times_up_message = "StandUp time's up."
+        self.questionnaire_header = "Hello, it's time for update on"
 
     # activate schedule events for all StandUp activity for work group
     def schedule_StandUp(self, group_channel):
@@ -145,11 +147,11 @@ class ScheduleController:
         work_group = DBController.get_group({'channel': group_channel})
         Utils.clear_reports_work_group(self.slack_client, work_group)
         self.works_report_controller.clean_reports()
-
+        group_channel_name = Utils.get_real_channel_name(self.slack_client, group_channel)
         print("SEND QUESTION MESSAGE FOR MEMBER", user.user_id)
         self.slack_client.api_call("chat.postMessage",
                                     channel=user.im_channel,
-                                    text=attachments[0],
+                                    text= self.questionnaire_header + group_channel_name + attachments[0],
                                     attachments=attachments[1])
 
     def stop_all(self):

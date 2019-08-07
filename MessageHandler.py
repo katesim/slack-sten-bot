@@ -23,10 +23,11 @@ class MessageHandler:
         Utils.clear_reports_work_group(self.slack_client, work_group)
 
         self.works_report_controller.clean_reports()
+        group_channel_name = Utils.get_real_channel_name(self.slack_client, work_group.channel)
         for u in work_group.users:
             self.slack_client.api_call("chat.postMessage",
                                        channel=u.im_channel,
-                                       text=attachments[0],
+                                       text= "It's time for update on" + group_channel_name + attachments[0],
                                        attachments=attachments[1])
 
     @staticmethod
