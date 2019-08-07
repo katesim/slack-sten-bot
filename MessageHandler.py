@@ -2,7 +2,7 @@ import time
 from flask import make_response
 from collections import namedtuple
 
-from ScheduleController import ScheduleController
+from ScheduleController import ScheduleController, QueueController
 from DBController import DBController
 from WorksReportController import WorksReportController
 from Utils import Utils
@@ -35,6 +35,7 @@ class MessageHandler:
             return '', ''
         Message = namedtuple('Message', 'text subtype')
         messages = [Message(message['text'], message.get('subtype')) for message in conversations_history['messages']]
+        # TODO check it in message handler
         if messages[0].subtype == "bot_message":
             return '', ''
         answer = messages[0].text
@@ -124,7 +125,8 @@ class MessageHandler:
                                                                                user),
                                                                            ts_answer=time.time())
 
-                work_group = DBController.get_group({'serial_id': 0})
+                current_channel = QueueController.get_current_channel(user)
+                work_group = DBController.get_group({'channel': current_channel})
                 work_group.update_reports(reports=self.works_report_controller.reports)
                 DBController.update_reports(work_group)
 
@@ -140,6 +142,8 @@ class MessageHandler:
                                                text=attachments[0],
                                                attachments=attachments[1],
                                                thread_ts=work_group.ts_reports)
+
+                    QueueController.call_next_in_queue(user)
 
                 else:
                     self.slack_client.api_call("chat.postMessage",

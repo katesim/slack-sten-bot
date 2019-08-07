@@ -9,7 +9,7 @@ from pprint import pprint
 
 from WorksReportController import WorksReportController
 from DBController import DBController
-from ScheduleController import ScheduleController
+from ScheduleController import ScheduleController, QueueController
 from MessageHandler import MessageHandler
 from Utils import Utils
 
@@ -66,7 +66,8 @@ def message_actions():
                 real_user_name=Utils.get_real_user_name(slack_client, user),
                 ts_answer=time.time())
 
-            work_group = DBController.get_group({'serial_id': 0})
+            current_channel = QueueController.get_current_channel(user)
+            work_group = DBController.get_group({'channel': current_channel})
             work_group.update_reports(reports=message_handler.works_report_controller.reports)
             DBController.update_reports(work_group)
             # work_group.update_ts(ts_reports=works_report_controller.ts_report)
@@ -82,6 +83,8 @@ def message_actions():
                                   text=attachments[0],
                                   attachments=attachments[1],
                                   thread_ts=work_group.ts_reports)
+                    
+            QueueController.call_next_in_queue(user)
             # Send an HTTP 200 response with empty body so Slack knows we're done here
             return make_response("", 200)
         return make_response("", 200)

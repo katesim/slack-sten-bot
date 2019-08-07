@@ -1,15 +1,15 @@
 import schedule
 import time
 import os
+from queue import PriorityQueue
+from collections import namedtuple
 
 from time_metods import plus_time, minus_time, formatted_time
 from DBController import DBController
 from Utils import Utils
 from WorksReportController import ReportState
 
-YOUR_DIRECT_CHANNEL = os.environ.get("YOUR_DIRECT_CHANNEL")
-YOUR_USER_ID = os.environ.get("YOUR_USER_ID")
-
+UserQueue = namedtuple('UserQueue', 'user_queue current_channel')
 
 class ScheduleController:
     reminder_message = "StandUp will be over soon."
@@ -69,10 +69,10 @@ class ScheduleController:
             for user in users:
                 print("ADD SCHEDULE REMINDER JOB FOR DAY {} FOR USER {}".format(weekday, user.user_id))
                 # need to form schedule queue for every user
-                self.add_scheduled_job(time, int(weekday), self.send_reminder_messages, [group_channel], group_channel, user)
+                self.add_scheduled_job(time, int(weekday), self.send_reminder_messages, [group_channel], user, group_channel)
 
         
-    def send_reminder_messages(self, group_channel, user):
+    def send_reminder_messages(self, user, group_channel):
         # need actual info
         work_group = DBController.get_group({'channel': group_channel})
         reports = work_group.reports
@@ -97,10 +97,10 @@ class ScheduleController:
 
             for user in users:
                     print("ADD SCHEDULE REPORT JOB FOR DAY {} FOR USER {}".format(weekday, user.user_id))
-                    self.add_scheduled_job(time, int(weekday), self.finish_questionnaire, [group_channel], group_channel, user)
+                    self.add_scheduled_job(time, int(weekday), self.finish_questionnaire, [group_channel], user, group_channel)
 
 
-    def finish_questionnaire(self, group_channel, user):
+    def finish_questionnaire(self, user, group_channel):
         # if empty send no answer
         work_group = DBController.get_group({'channel': group_channel})
         reports = work_group.reports
@@ -109,17 +109,10 @@ class ScheduleController:
         # has answer
         if report_state == ReportState.INCOMPLETE:
             text, attachment = self.works_report_controller.create_report(real_user_name, user.user_id)
-            self.slack_client.api_call("chat.postMessage",
-                                        channel=user.im_channel,
-                                        text=self.times_up_message)
-            self.slack_client.api_call("chat.postMessage",
-                                        channel=group_channel,
-                                        text=text,
-                                        attachments=attachment,
-                                        thread_ts=work_group.ts_reports)
         if report_state == ReportState.EMPTY:
             text, attachment = self.works_report_controller.create_report(real_user_name, user.user_id,
                                                                             self.no_answer_message)
+        if report_state == ReportState.INCOMPLETE or report_state == ReportState.EMPTY:
             self.slack_client.api_call("chat.postMessage",
                                         channel=user.im_channel,
                                         text=self.times_up_message)
@@ -128,6 +121,7 @@ class ScheduleController:
                                         text=text,
                                         attachments=attachment,
                                         thread_ts=work_group.ts_reports)
+            QueueController.call_next_in_queue(user)
 
     def schedule_group_questionnaire(self, group_channel, users, times):
 
@@ -142,9 +136,9 @@ class ScheduleController:
 
             for user in users:
                 print("ADD SCHEDULE QUESTIONNARE JOB FOR DAY {} FOR USER {}".format(weekday, user.user_id))
-                self.add_scheduled_job(time, int(weekday), self.send_question_messages, [group_channel], group_channel, user)
+                self.add_scheduled_job(time, int(weekday), self.send_question_messages, [group_channel], user, group_channel)
 
-    def send_question_messages(self, group_channel, user):
+    def send_question_messages(self, user, group_channel):
 
         attachments = self.works_report_controller.answer_menu(self.works_report_controller.questions[0])
         # delete all reports from db and from work controller before first question
@@ -165,14 +159,78 @@ class ScheduleController:
     # could be used for different tasks
     def add_scheduled_job(self, time, day, job, tags, *args):
         assert 0 <= day < 7, "invalid day value"
-        # Now monday day for tests
+
+        user_id = args[0]
+        current_channel_id = args[1]
+        user_queue = QueueController.get_user_queue(user_id)
+        if not user_queue:
+            user_queue = PriorityQueue()
+        sort_field = "{},{}".format(day, time)
+        #update channel
         {
-            0: lambda job, *args: schedule.every().monday.at(time).do(job, *args).tag(*tags),
-            # schedule.every(20).seconds.do(job, *args), #
-            1: lambda job, *args: schedule.every().tuesday.at(time).do(job, *args).tag(*tags),
-            2: lambda job, *args: schedule.every().wednesday.at(time).do(job, *args).tag(*tags),
-            3: lambda job, *args: schedule.every().thursday.at(time).do(job, *args).tag(*tags),
-            4: lambda job, *args: schedule.every().friday.at(time).do(job, *args).tag(*tags),
-            5: lambda job, *args: schedule.every().saturday.at(time).do(job, *args).tag(*tags),
-            6: lambda job, *args: schedule.every().sunday.at(time).do(job, *args).tag(*tags)
+            0: lambda job, *args: schedule.every().monday.at(time).do(user_queue.put, (sort_field, job, *args)).tag(*tags),
+            1: lambda job, *args: schedule.every().tuesday.at(time).do(user_queue.put, (sort_field, job, *args)).tag(*tags),
+            2: lambda job, *args: schedule.every().wednesday.at(time).do(user_queue.put, (sort_field, job, *args)).tag(*tags),
+            3: lambda job, *args: schedule.every().thursday.at(time).do(user_queue.put, (sort_field, job, *args)).tag(*tags),
+            4: lambda job, *args: schedule.every().friday.at(time).do(user_queue.put, (sort_field, job, *args)).tag(*tags),
+            5: lambda job, *args: schedule.every().saturday.at(time).do(user_queue.put, (sort_field, job, *args)).tag(*tags),
+            6: lambda job, *args: schedule.every().sunday.at(time).do(user_queue.put, (sort_field, job, *args)).tag(*tags)
         }[day](job, *args)
+
+        QueueController.update_in_process(user_id, user_queue, current_channel_id)
+
+class QueueController:
+
+
+    in_process = {}
+    # def __init__(self):
+    #     # {user: [user_queue, current_channel]}
+    #     self.in_process = {}
+
+    @classmethod
+    def get_user_queue(cls, user):
+        return cls.in_process.get(user)
+
+    @classmethod
+    def get_current_channel(cls, user):
+        user_in_process = cls.in_process.get(user)
+        if user_in_process:
+            return user_in_process.current_channel
+        print("THERE IS NO USER ", user)
+
+    # @classmethod
+    # def parse_queue_obj(cls, user_queue):
+    #     sort_field, job, *args = user_queue
+
+    @classmethod
+    def call_next_in_queue(cls, user):
+        user_queue = cls.get_user_queue(user)
+        if not user_queue.empty():
+            sort_field, job, *args = user_queue.get()
+            current_channel = args[1]
+            print("SORT TIME: ", sort_field)
+            print("PRINT JOB ARGS: ", *args)
+            job(*args)
+            user_queue.task_done()
+        cls.update_in_process(user, user_queue, current_channel)
+
+
+    @classmethod
+    def update_in_process(cls, user, user_queue, current_channel):
+        print("UPDATE USER IN PROCESS")
+        cls.in_process[user] = UserQueue(user_queue, current_channel)
+
+    # @classmethod
+    # def update_current_channel(cls, user, current_channel):
+    #     user_in_process = cls.in_process.get(user)
+    #     if user_in_process:
+    #         # is it ok use tuple for changed data?
+    #         user_in_process.current_channel = current_channel
+    #         return
+    
+    # def update_user_queue(self, user, user_queue):
+    #     user_in_process = self.in_process.get(user)
+    #     if user_in_process:
+    #         # is it ok use tuple for changed data
+    #         user_in_process.user_queue = user_queue
+    #         return
