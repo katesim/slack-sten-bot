@@ -37,9 +37,9 @@ class MessageHandler:
             return '', ''
         Message = namedtuple('Message', 'text subtype')
         messages = [Message(message['text'], message.get('subtype')) for message in conversations_history['messages']]
-        # TODO check it in message handler
-        if messages[0].subtype == "bot_message":
-            return '', ''
+        # # TODO check it in message handler
+        # if messages[0].subtype == "bot_message":
+        #     return '', ''
         answer = messages[0].text
         if messages[1].text in WorksReportController().questions and messages[1].subtype == 'bot_message':
             return messages[1].text, answer
@@ -97,7 +97,6 @@ class MessageHandler:
     def message_handler(self, message_event):
         subtype = message_event.get("subtype")
         channel = message_event.get("channel")
-        message = message_event.get("text")
         user = message_event.get("user")
         message_before_change = None
         if message_event.get("previous_message"):
@@ -107,7 +106,7 @@ class MessageHandler:
             if message_before_change in WorksReportController().questions:
                 print("USER SELECTED SHORT ANSWER")
 
-        if user:
+        if user and subtype != "bot_message":
             print("USER ID", user)
             conversations_history = self.slack_client.api_call("conversations.history",
                                                                channel=channel,
