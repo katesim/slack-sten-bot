@@ -27,7 +27,8 @@ class MessageHandler:
         for u in work_group.users:
             self.slack_client.api_call("chat.postMessage",
                                        channel=u.im_channel,
-                                       text= "It's time for update on" + group_channel_name + attachments[0],
+                                       text="It's time for *{}* update\n\n{}".format(
+                                           group_channel_name, attachments[0]),
                                        attachments=attachments[1])
 
     @staticmethod
@@ -67,7 +68,7 @@ class MessageHandler:
                 # TODO заполнить из странички-админки
                 DBController.add_group(dict(
                     channel="CL67NCJ0J",  # test channel
-                    #users=[('UHTJL2NKZ', self.slack_client.api_call("im.open", user='UHTJL2NKZ')['channel'].get('id')),
+                    # users=[('UHTJL2NKZ', self.slack_client.api_call("im.open", user='UHTJL2NKZ')['channel'].get('id')),
                     users=[('UL4D3C0HG', self.slack_client.api_call("im.open", user='UL4D3C0HG')['channel'].get('id'))],
                     times={'6': '17:00'}))
 

@@ -11,11 +11,12 @@ from WorksReportController import ReportState
 
 UserQueue = namedtuple('UserQueue', 'user_queue current_channel')
 
+
 class ScheduleController:
     reminder_message = "StandUp will be over soon."
     no_answer_message = "No answer"
     times_up_message = "StandUp time's up."
-    questionnaire_header = "Hello, it's time for update on"
+    questionnaire_header = "Hello, it's time for *{}* update!\n\n"
 
     def __init__(self, slack_client, works_report_controller):
         self.slack_client = slack_client
@@ -23,7 +24,7 @@ class ScheduleController:
         self.reminder_message = "There's one hour left until the end of the StandUp."
         self.no_answer_message = "No answer"
         self.times_up_message = "StandUp time's up."
-        self.questionnaire_header = "Hello, it's time for update on"
+        self.questionnaire_header = "Hello, it's time for *{}* update!\n\n"
 
     # activate schedule events for all StandUp activity for work group
     def schedule_StandUp(self, group_channel):
@@ -55,9 +56,9 @@ class ScheduleController:
         # add reminder for every report day
 
         # code for test
-        for time in times:#weekday in times.keys():  # time in times:
+        for time in times:  # weekday in times.keys():  # time in times:
             # calculate time for reminder
-            weekday="6"
+            weekday = "6"
             time = plus_time(time=time, weekday=int(weekday), minute_shift=1)[0]
             print("TIME!!!", time)
             time = formatted_time(time)
@@ -73,7 +74,6 @@ class ScheduleController:
                 # need to form schedule queue for every user
                 self.add_scheduled_job(time, int(weekday), self.send_reminder_messages, [group_channel], user, group_channel)
 
-        
     def send_reminder_messages(self, user, group_channel):
         # need actual info
         work_group = DBController.get_group({'channel': group_channel})
@@ -81,26 +81,25 @@ class ScheduleController:
         report_state = self.works_report_controller.get_report_state(reports.get(user.user_id))
         if report_state == ReportState.EMPTY or report_state == ReportState.INCOMPLETE:
             self.slack_client.api_call("chat.postMessage",
-                                        channel=user.im_channel,
-                                        text=self.reminder_message)
+                                       channel=user.im_channel,
+                                       text=self.reminder_message)
 
     def schedule_completion(self, group_channel, users, times):
 
         print("FORM REPORT")
         # add report into group channel for every report day
         for time in times:
-            weekday="6"
+            weekday = "6"
             time = plus_time(time=time, weekday=int(weekday), minute_shift=2)[0]
             time = formatted_time(time)
-        
+
         # for weekday in times.keys():  # time in times:
         #     time, weekday = plus_time(time=times[weekday], weekday=int(weekday), hour_shift=2)
         #     time = formatted_time(time)
 
             for user in users:
-                    print("ADD SCHEDULE REPORT JOB FOR DAY {} FOR USER {}".format(weekday, user.user_id))
-                    self.add_scheduled_job(time, int(weekday), self.finish_questionnaire, [group_channel], user, group_channel)
-
+                print("ADD SCHEDULE REPORT JOB FOR DAY {} FOR USER {}".format(weekday, user.user_id))
+                self.add_scheduled_job(time, int(weekday), self.finish_questionnaire, [group_channel], user, group_channel)
 
     def finish_questionnaire(self, user, group_channel):
         # if empty send no answer
@@ -113,16 +112,16 @@ class ScheduleController:
             text, attachment = self.works_report_controller.create_report(real_user_name, user.user_id)
         if report_state == ReportState.EMPTY:
             text, attachment = self.works_report_controller.create_report(real_user_name, user.user_id,
-                                                                            self.no_answer_message)
+                                                                          self.no_answer_message)
         if report_state == ReportState.INCOMPLETE or report_state == ReportState.EMPTY:
             self.slack_client.api_call("chat.postMessage",
-                                        channel=user.im_channel,
-                                        text=self.times_up_message)
+                                       channel=user.im_channel,
+                                       text=self.times_up_message)
             self.slack_client.api_call("chat.postMessage",
-                                        channel=group_channel,
-                                        text=text,
-                                        attachments=attachment,
-                                        thread_ts=work_group.ts_reports)
+                                       channel=group_channel,
+                                       text=text,
+                                       attachments=attachment,
+                                       thread_ts=work_group.ts_reports)
             QueueController.call_next_in_queue(user)
 
     def schedule_group_questionnaire(self, group_channel, users, times):
@@ -130,9 +129,9 @@ class ScheduleController:
         print("FORM QUESTIONNARE")
         # start questionnare in every report day
         for time in times:
-            weekday="6"
+            weekday = "6"
             time = formatted_time(time)
-           
+
         # for weekday in times.keys():
         #     time = formatted_time(times[weekday])
 
@@ -150,9 +149,10 @@ class ScheduleController:
         group_channel_name = Utils.get_real_channel_name(self.slack_client, group_channel)
         print("SEND QUESTION MESSAGE FOR MEMBER", user.user_id)
         self.slack_client.api_call("chat.postMessage",
-                                    channel=user.im_channel,
-                                    text= self.questionnaire_header + group_channel_name + attachments[0],
-                                    attachments=attachments[1])
+                                   channel=user.im_channel,
+                                   text=self.questionnaire_header.format(
+                                       group_channel_name) + attachments[0],
+                                   attachments=attachments[1])
 
     def stop_all(self):
         schedule.clear()
@@ -168,7 +168,7 @@ class ScheduleController:
         if not user_queue:
             user_queue = PriorityQueue()
         sort_field = "{},{}".format(day, time)
-        #update channel
+        # update channel
         {
             0: lambda job, *args: schedule.every().monday.at(time).do(user_queue.put, (sort_field, job, *args)).tag(*tags),
             1: lambda job, *args: schedule.every().tuesday.at(time).do(user_queue.put, (sort_field, job, *args)).tag(*tags),
@@ -181,8 +181,8 @@ class ScheduleController:
 
         QueueController.update_in_process(user_id, user_queue, current_channel_id)
 
-class QueueController:
 
+class QueueController:
 
     in_process = {}
     # def __init__(self):
@@ -191,7 +191,10 @@ class QueueController:
 
     @classmethod
     def get_user_queue(cls, user):
-        return cls.in_process.get(user)
+        user_in_process = cls.in_process.get(user)
+        if user_in_process:
+            return user_in_process.user_queue
+        print("THERE IS NO USER ", user)
 
     @classmethod
     def get_current_channel(cls, user):
@@ -216,7 +219,6 @@ class QueueController:
             user_queue.task_done()
         cls.update_in_process(user, user_queue, current_channel)
 
-
     @classmethod
     def update_in_process(cls, user, user_queue, current_channel):
         print("UPDATE USER IN PROCESS")
@@ -229,7 +231,7 @@ class QueueController:
     #         # is it ok use tuple for changed data?
     #         user_in_process.current_channel = current_channel
     #         return
-    
+
     # def update_user_queue(self, user, user_queue):
     #     user_in_process = self.in_process.get(user)
     #     if user_in_process:
